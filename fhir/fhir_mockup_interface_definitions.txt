@@ -1,0 +1,29 @@
+## Data Intake
+
+# Get a list of patients who have authorized their data to be used in this way
+get_list_of_authorized_patients(...)
+
+# Get fingerprinting info on patient
+get_patient_identifying_info(...)
+
+
+# Get as complete of a patient history as possible
+get_history_of_patient(...)
+
+# Additional info on doctors, hospitals, medications, procedures, and so forth referenced in patient info
+get_related_entity_info(...)
+
+
+# Pack patient and entity info into data format to be used with the blockchain
+pack_info(...)
+
+
+
+## FHIR Bridge
+
+# given a url and authorization through something like OAuth, establish a connection to an FHIR server
+get_fhir_server_connection(...)
+
+
+# connect to local database to find which fhir servers are available to you
+get_list_of_authorized_fhir_servers(...)
