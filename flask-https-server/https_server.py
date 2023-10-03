@@ -64,11 +64,12 @@ def login():
 
             # Generate a session key
             client_ip = request.remote_addr
+            client_port = request.environ.get('REMOTE_PORT')
             session_key = generate_salt().hex()
             # Store the session key in the server's database along with client id and timestamp plus six hours
             session_keys[session_key] = (username, client_ip, time.time() + 21600)
             
-            print(f"Client IP: {client_ip}")
+            print(f"Client IP: {client_ip}, Client Port: {client_port}")
             return jsonify({"message": "Login successful!", "session_key":session_key}), 200
         except:
             pass
@@ -78,9 +79,9 @@ def login():
 
 @app.route('/home', methods=['POST'])
 def home():
-    session_key = request.json.get('session_key')
+    session_key = request.json.get('session_key', None)
     client_ip = request.remote_addr
-    if session_key in session_keys:
+    if (session_key is not None) and (session_key in session_keys):
         if session_keys[session_key][1] == client_ip:
             # Check if session key has expired
             if session_keys[session_key][2] > time.time():
