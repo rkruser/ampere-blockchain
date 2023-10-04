@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, session
 import database as db
 import security as sec
+import ssl
 
 app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
@@ -73,6 +74,44 @@ def home():
 
     return jsonify({"message": f"Welcome home, {username}!"}), 200
 
+@app.route('/add_user_license', methods=['POST'])
+def add_user_license():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401
+    license_name = request.json.get('license_name')
+    try:
+        db.add_user_license(username, license_name)
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 401
+    return jsonify({"message": f"Added license {license_name}"}), 200
+
+@app.route('/request_api_key', methods=['POST'])
+def request_api_key():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401
+    license_name = request.json.get('license_name')
+    try:
+        api_key = db.request_api_key(username, license_name)
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 401
+    return jsonify({"message": "Successfully added API key",
+                    "api_key": api_key}), 200
+
+@app.route('/activate_api_key', methods=['POST'])
+def activate_api_key():
+    username, status = verify_session() #Someone has to be logged in, doesn't matter who
+    if status != "success":
+        return jsonify({"message": status}), 401
+    api_key = request.json.get('api_key')
+    try:
+        db.activate_api_key(username, api_key)
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 401
+    return jsonify({"message": "Successfully activated API key"}), 200
+
+
 @app.route('/server_status', methods=['GET', 'POST'])
 def server_status():
     username, status = verify_session()
@@ -91,6 +130,12 @@ def server_status():
                     }), 200
 
 if __name__ == '__main__':
+    ssl_context = {
+        'keyfile': 'C:/Certbot/live/ryenandvivekstartup.online/privkey.pem',
+        'certfile': 'C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem',
+        'cert_reqs': ssl.CERT_OPTIONAL
+    }
+
     # These paths should really be in a .env file that is configured to the host computer
     app.run(ssl_context=('C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem', 
                          'C:/Certbot/live/ryenandvivekstartup.online/privkey.pem'), 

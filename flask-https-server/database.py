@@ -10,7 +10,8 @@ _api_key_database = {}
 #  the features they have access to,
 #  in this case, how many API keys they can generate
 license_database = {
-    "standard_license": 10  # 10 API keys
+    "standard_license": 1,
+    "special_license": 2
 }
 
 def add_invitation(invitation_code):
@@ -169,7 +170,8 @@ def request_api_key(username, license_name):
         raise ValueError("User has reached the maximum number of API keys for this license")
     api_key = sec.generate_api_key()
     _api_key_database[api_key] = {
-        "username": username,
+        "creator_username": username,
+        "activator_username": None,
         "license_name": license_name,
         "activated": False,
         "activation_expiration": time.time() + 86400
@@ -178,7 +180,7 @@ def request_api_key(username, license_name):
     return api_key
 
 
-def activate_api_key(api_key):
+def activate_api_key(username, api_key):
     if api_key not in _api_key_database:
         raise ValueError("Invalid API key")
     if _api_key_database[api_key]["activated"]:
@@ -186,6 +188,7 @@ def activate_api_key(api_key):
     if _api_key_database[api_key]["activation_expiration"] < time.time():
         raise ValueError("API key activation period has expired")
     _api_key_database[api_key]["activated"] = True
+    _api_key_database[api_key]["activator_username"] = username
     return True
 
 
