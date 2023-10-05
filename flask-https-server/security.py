@@ -88,3 +88,16 @@ def verify_password(password_string, encoded_salt, encoded_stored_password_hash,
         print(e)
         return False
     return True
+
+
+def sha256(data, scheme=EncodingSchemes.hex):
+    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    digest.update(data)
+    hash_value = digest.finalize()
+    return scheme.encode(hash_value)
+
+def hash_api_key(api_key, scheme=EncodingSchemes.hex):
+    return sha256(scheme.decode(api_key))
+
+def hash_api_key_truncate_64(api_key, scheme=EncodingSchemes.hex):
+    return hash_api_key(api_key, scheme=scheme)[:16]

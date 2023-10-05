@@ -11,12 +11,69 @@ server_status_url = base_url + "/server_status"
 add_user_license_url = base_url + "/add_user_license"
 request_api_key_url = base_url + "/request_api_key"
 activate_api_key_url = base_url + "/activate_api_key"
+download_node_database_url = base_url + "/get_node_database"
 
-create_account = input("Create account if none exists? (y/n): ").lower() == "y"
-username = input("Username: ")
-password = input("Password: ")
-client_number = int(input("Client number (1-4): "))
+create_account = None
+username = None
+password = None
+client_number = None
 
+
+
+def login_and_register_public_key(user, passw, public_key, port, session=None):
+    if session is None:
+        session = requests.Session()
+
+    data = {
+        "username": user,
+        "password": passw
+    }
+    response = session.post(login_url, json=data)
+    if response.status_code != 200:
+        registration_data = data.copy()
+        registration_data["invitation_code"] = "basic_invite"
+        response = session.post(register_url, json=registration_data)
+        if response.status_code != 200:
+            print("Registration failed")
+            exit(1)
+        response = session.post(login_url, json=data)
+        if response.status_code != 200:
+            print("Login failed")
+            exit(1)
+
+    response = session.post(request_api_key_url, json={"license_name": "standard_license"})
+    if response.status_code != 200:
+        print("Request API key failed")
+        exit(1)
+    api_key = response.json().get("api_key", None)
+    api_key_hash = response.json().get("api_key_hash", None)
+
+    activation_data = {
+        "api_key": api_key,
+        "node_port": port,
+        "public_key": public_key
+    }
+    response = session.post(activate_api_key_url, json=activation_data)
+    if response.status_code != 200:
+        print("Activation failed")
+        exit(1)
+    print(response.json().get("message", ""))
+
+    return session
+
+def download_node_database(session):
+    response = session.get(download_node_database_url)
+    if response.status_code != 200:
+        print("Download node database failed")
+        exit(1)
+    return response.json().get("node_database", None)
+
+def client5():
+    session = login_and_register_public_key(username, password, "here_is_key", 5000)
+    node_database = download_node_database(session)
+    session.get(logout_url)
+    session.close()
+    print(node_database)
 
 def client4():
     with requests.Session() as session:
@@ -168,11 +225,19 @@ def client1():
                 print(json.dumps(response.json(), indent=2, sort_keys=True))
                 check_again = input("Check again? (y/n): ").lower()
 
-if client_number == 1:
-    client1()
-elif client_number == 2:
-    client2()
-elif client_number == 3:
-    client3()
-elif client_number == 4:
-    client4()
+if __name__ == "__main__":
+    create_account = input("Create account if none exists? (y/n): ").lower() == "y"
+    username = input("Username: ")
+    password = input("Password: ")
+    client_number = int(input("Client number (1-5): "))
+
+    if client_number == 1:
+        client1()
+    elif client_number == 2:
+        client2()
+    elif client_number == 3:
+        client3()
+    elif client_number == 4:
+        client4()
+    elif client_number == 5:
+        client5()

@@ -14,6 +14,8 @@ license_database = {
     "special_license": 2
 }
 
+node_database = {}
+
 def add_invitation(invitation_code):
     _invitation_database.add(invitation_code)
     return True
@@ -180,15 +182,27 @@ def request_api_key(username, license_name):
     return api_key
 
 
-def activate_api_key(username, api_key):
+def activate_api_key(username, api_key, data=None):
     if api_key not in _api_key_database:
         raise ValueError("Invalid API key")
     if _api_key_database[api_key]["activated"]:
         raise ValueError("API key already activated")
     if _api_key_database[api_key]["activation_expiration"] < time.time():
         raise ValueError("API key activation period has expired")
+    if data is None:
+        raise ValueError("No activation data provided")
     _api_key_database[api_key]["activated"] = True
     _api_key_database[api_key]["activator_username"] = username
+    ip_address = data["ip_address"]
+    port = data["port"]
+    public_key = data["public_key"]
+    api_key_hash = sec.hash_api_key_truncate_64(api_key)
+    node_database[api_key_hash] = {
+        "username": username,
+        "address": f"tcp://{ip_address}:{port}",
+        "public_key": public_key
+    }
+
     return True
 
 

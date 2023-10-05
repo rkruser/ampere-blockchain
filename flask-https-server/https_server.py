@@ -97,7 +97,8 @@ def request_api_key():
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
     return jsonify({"message": "Successfully added API key",
-                    "api_key": api_key}), 200
+                    "api_key": api_key,
+                    "api_key_hash":sec.hash_api_key_truncate_64(api_key)}), 200
 
 @app.route('/activate_api_key', methods=['POST'])
 def activate_api_key():
@@ -105,11 +106,30 @@ def activate_api_key():
     if status != "success":
         return jsonify({"message": status}), 401
     api_key = request.json.get('api_key')
+
+    client_ip = request.remote_addr
+    node_port = request.json.get('node_port',None)
+    public_key = request.json.get('public_key',None)
+    data = None
+    if (public_key is not None) and (node_port is not None):
+        data = {"ip_address": client_ip, "port": node_port, "public_key": public_key}
+
     try:
-        db.activate_api_key(username, api_key)
+        db.activate_api_key(username, api_key, data=data)
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
     return jsonify({"message": "Successfully activated API key"}), 200
+
+
+@app.route('/get_node_database', methods=['GET', 'POST'])
+def get_node_database():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401
+    
+    return jsonify({"message": "Here are the nodes!",
+                    "node_database": db.node_database,
+                    }), 200
 
 
 @app.route('/server_status', methods=['GET', 'POST'])
@@ -126,7 +146,8 @@ def server_status():
                     "user_database": db.convert_sets_to_lists(db._user_database),
                     "session_database": db.convert_sets_to_lists(db._session_database),
                     "license_database": db.convert_sets_to_lists(db.license_database),
-                    "api_key_database": db.convert_sets_to_lists(db._api_key_database)
+                    "api_key_database": db.convert_sets_to_lists(db._api_key_database),
+                    "node_database": db.node_database
                     }), 200
 
 if __name__ == '__main__':
