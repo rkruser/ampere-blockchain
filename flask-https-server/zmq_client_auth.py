@@ -3,8 +3,36 @@ import time
 from multiprocessing import Process, Value, Lock
 import sys
 import random
+import threading
 from client import login_or_register, register_public_key, download_node_database, logout_and_close
 from utils import get_lan_ip
+
+
+
+def send_random_pings(name, port, clients):
+    t1 = time.time()
+    t2 = t1
+    while t2-t1 < 30:
+        client = random.choice(list(clients.values()))
+        client.send(b"ping from " + name.encode() + b':' + str(port).encode())
+        time.sleep(random.randint(1, 5))
+        t2 = time.time()
+
+def receive_messages(name, port, server, lock, counter):
+    t1 = time.time()
+    t2 = t1
+    while t2-t1 < 30:
+        try:
+            _, response = server.recv_multipart()
+            print(f"Node {name}:{port} received {response.decode()}")
+            with lock:
+                counter.value += 1
+        except zmq.error.Again:
+            pass
+        except Exception as e:
+            print(f"Node on port {port} error receiving response: {e}")
+        finally:
+            t2 = time.time()
 
 # Each process will call this function with a unique port
 def run_node(name, lock, counter):
@@ -15,6 +43,8 @@ def run_node(name, lock, counter):
 
     # Setup server socket
     server = ctx.socket(zmq.ROUTER)
+    server.setsockopt(zmq.RCVTIMEO, 2000)
+    server.setsockopt(zmq.LINGER, 0)
     server.curve_secretkey = secret_key
     server.curve_publickey = public_key
     server.curve_server = True
@@ -46,43 +76,50 @@ def run_node(name, lock, counter):
     if name.startswith("node0"):
         print(node_database)
 
+    del node_database[api_key_hash] #Get rid of self
+
     # Setup client sockets for all other nodes
     clients = {}
-    for other_keyhash, info in node_database.items():
-        if other_keyhash == api_key_hash:
-            continue
+    for keyhash, info in node_database.items():
         client = ctx.socket(zmq.DEALER)
+        client.setsockopt(zmq.LINGER, 0)
         client.curve_secretkey = secret_key
         client.curve_publickey = public_key
         client.curve_serverkey = info["public_key"].encode('ascii')
         client_port = info["port"]
         client_ip = info["lan_ip_address"]
         client.connect(f"tcp://{client_ip}:{client_port}")
-        clients[other_keyhash] = client
+        clients[keyhash] = client
 
-    # Sending pings
-    for _, client in clients.items():
-        client.send(b"ping from " + name.encode()+ b':' + str(port).encode())
+    ping_thread = threading.Thread(target=send_random_pings, args=(name, port, clients))
+    ping_thread.start()
 
-    # Waiting for responses
-    server.setsockopt(zmq.RCVTIMEO, 5000)
-    for _ in [keyhash for keyhash in node_database if keyhash != api_key_hash]:
-        try:
-            _, response = server.recv_multipart()
-            print(f"Node {name}:{port} received {response.decode()}")
-            with lock:
-                counter.value += 1
-        except zmq.error.Again:
-            print(f"Node {name}:{port} timed out")
-            break
-        except Exception as e:
-            print(f"Node on port {port} error receiving response: {e}")
+    receive_thread = threading.Thread(target=receive_messages, args=(name, port, server, lock, counter))
+    receive_thread.start()
+
+    ping_thread.join()
+    receive_thread.join()
+
+    # # Sending pings
+    # for _, client in clients.items():
+    #     client.send(b"ping from " + name.encode()+ b':' + str(port).encode())
+
+    # # Waiting for responses
+    # for _ in [keyhash for keyhash in node_database if keyhash != api_key_hash]:
+    #     try:
+    #         _, response = server.recv_multipart()
+    #         print(f"Node {name}:{port} received {response.decode()}")
+    #         with lock:
+    #             counter.value += 1
+    #     except zmq.error.Again:
+    #         print(f"Node {name}:{port} timed out")
+    #         break
+    #     except Exception as e:
+    #         print(f"Node on port {port} error receiving response: {e}")
 
     # Cleanup
-    server.setsockopt(zmq.LINGER, 0)
     server.close()
     for client in clients.values():
-        client.setsockopt(zmq.LINGER, 0)
         client.close()
 
     ctx.term()
