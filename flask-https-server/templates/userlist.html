@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User List</title>
+</head>
+<body>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Active IP Addresses</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for username, active_ips in user_data.items() %}
+            <tr>
+                <td>{{ username }}</td>
+                <td>
+                    {% if active_ips %}
+                        {% for ip in active_ips %}
+                            {{ ip }}<br>
+                        {% endfor %}
+                    {% else %}
+                        No active sessions
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

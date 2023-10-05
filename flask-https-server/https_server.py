@@ -168,6 +168,14 @@ def visualize():
     graph_data = db.convert_to_cytoscape_data(db.node_database)
     return render_template('visualize.html', graph_data=graph_data)
 
+@app.route('/userlist')
+def user_list():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401    
+    user_data = db.preprocess_user_data(db._user_database)
+    return render_template('userlist.html', user_data=user_data)
+
 
 
 if __name__ == '__main__':

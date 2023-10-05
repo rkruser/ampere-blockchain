@@ -236,3 +236,11 @@ def convert_to_cytoscape_data(node_database):
     return {"nodes": nodes, "edges": edges}
 
 
+def preprocess_user_data(user_database):
+    preprocessed_data = {}
+    for username, data in user_database.items():
+        active_ips = list(data['ip_sessions'].keys())
+        preprocessed_data[username] = active_ips
+    return preprocessed_data
+
+
