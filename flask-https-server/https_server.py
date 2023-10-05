@@ -13,7 +13,7 @@ db.add_user("admin", "password", permission_level="admin")
 
 @app.route('/')
 def index():
-    return "Hello, this is an https server!"
+    return render_template('index.html')
 
 @app.route('/register', methods=['POST'])
 def register():
