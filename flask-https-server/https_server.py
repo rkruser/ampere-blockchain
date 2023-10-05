@@ -158,6 +158,18 @@ def server_status():
                     "node_database": db.node_database
                     }), 200
 
+
+@app.route('/visualize')
+def visualize():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401
+    
+    graph_data = db.convert_to_cytoscape_data(db.node_database)
+    return render_template('visualize.html', graph_data=graph_data)
+
+
+
 if __name__ == '__main__':
     ssl_context = {
         'keyfile': 'C:/Certbot/live/ryenandvivekstartup.online/privkey.pem',

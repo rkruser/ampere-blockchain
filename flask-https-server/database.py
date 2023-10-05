@@ -220,3 +220,19 @@ def convert_sets_to_lists(data):
         return [convert_sets_to_lists(value) for value in data]
     else:
         return data
+
+
+def convert_to_cytoscape_data(node_database):
+    nodes = []
+    edges = []
+    
+    for key, data in node_database.items():
+        if data['active']:
+            nodes.append({"data": {"id": data['username'], "label": data['username']}})
+            for other_key in node_database:
+                if other_key != key and node_database[other_key]['active']:
+                    edges.append({"data": {"source": data['username'], "target": node_database[other_key]['username']}})
+    
+    return {"nodes": nodes, "edges": edges}
+
+
