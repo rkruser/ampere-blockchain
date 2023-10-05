@@ -203,7 +203,8 @@ def activate_api_key(username, api_key, data=None):
         "lan_ip_address": lan_ip_address,
         "remote_ip_address": remote_ip_address,
         "port": port,
-        "public_key": public_key
+        "public_key": public_key,
+        "active": True
     }
 
     return True

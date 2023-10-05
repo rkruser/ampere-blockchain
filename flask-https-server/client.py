@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-
+import random
 from utils import get_lan_ip, get_remote_ip
 
 base_url = "https://ryenandvivekstartup.online"
@@ -20,28 +20,33 @@ username = None
 password = None
 client_number = None
 
-
-
-def login_and_register_public_key(user, passw, public_key, port):
+def login_or_register(user, passw, invitation_code=None):
     session = requests.Session()
-
     data = {
         "username": user,
         "password": passw
     }
     response = session.post(login_url, json=data)
     if response.status_code != 200:
+        print(f"Login failed, trying to register {user}")
         registration_data = data.copy()
-        registration_data["invitation_code"] = "basic_invite"
+        invite = "basic_invite"
+        if invitation_code is not None:
+            invite = invitation_code
+        registration_data["invitation_code"] = invite
         response = session.post(register_url, json=registration_data)
         if response.status_code != 200:
-            print("Registration failed")
+            print("Registration failed, exiting")
+            session.close()
             exit(1)
         response = session.post(login_url, json=data)
         if response.status_code != 200:
-            print("Login failed")
+            print("Login failed, exiting")
+            session.close()
             exit(1)
+    return session
 
+def register_public_key(session, public_key, port, lan_ip=None, remote_ip=None):
     response = session.post(request_api_key_url, json={"license_name": "standard_license"})
     if response.status_code != 200:
         print("Request API key failed")
@@ -53,36 +58,41 @@ def login_and_register_public_key(user, passw, public_key, port):
         "api_key": api_key,
         "node_port": port,
         "public_key": public_key,
-        "lan_ip_address": get_lan_ip(),
-        "remote_ip_address": get_remote_ip(),
+        "lan_ip_address": lan_ip if (lan_ip is not None) else get_lan_ip(),
+        "remote_ip_address": remote_ip if (remote_ip is not None) else get_remote_ip(),
     }
     response = session.post(activate_api_key_url, json=activation_data)
     if response.status_code != 200:
-        print("Activation failed")
+        print("Activation failed, exiting")
+        session.close()
         exit(1)
     print(response.json().get("message", ""))
 
-    return session, api_key_hash
+    return api_key_hash
 
 def download_node_database(session):
     response = session.get(download_node_database_url)
     if response.status_code != 200:
-        print("Download node database failed")
+        print("Download node database failed, exiting")
+        session.close()
         exit(1)
-    return response.json().get("node_database", None)
+    return response.json().get("node_database")
 
 def logout_and_close(session):
     response = session.get(logout_url)
     session.close()
     if response.status_code != 200:
-        print("Logout failed")
+        print("Logout failed, exiting")
         exit(1)
 
 def client5():
-    session, _ = login_and_register_public_key(username, password, "here_is_key", 5000)
+    session = login_or_register(username, password)
+    api_key_hash = register_public_key(session, "public_key", random.randint(5555, 6555))
     node_database = download_node_database(session)
+    print("Database:\n", node_database)
+    print("My hash:\n", api_key_hash)
+    print("My database entry:\n", node_database[api_key_hash])
     logout_and_close(session)
-    print(node_database)
 
 def client4():
     with requests.Session() as session:

@@ -3,11 +3,12 @@ import time
 from multiprocessing import Process, Value, Lock
 import sys
 import random
-from client import login_and_register_public_key, download_node_database, logout_and_close
+from client import login_or_register, register_public_key, download_node_database, logout_and_close
+from utils import get_lan_ip
 
 # Each process will call this function with a unique port
 def run_node(name, lock, counter):
-    password = name+str(random.randint(0,10000))
+    password = name
 
     ctx = zmq.Context()
     public_key, secret_key = zmq.curve_keypair()
@@ -21,19 +22,24 @@ def run_node(name, lock, counter):
     # Set random port in range 5555-6555
     port = random.randint(5555, 6555)
     port_not_bound = True
-    while port_not_bound:
+    my_ip_address = get_lan_ip()
+    count = 0
+    while port_not_bound and count < 10:
         try:
-            server.bind(f"tcp://192.168.8.179:{port}")
+            server.bind(f"tcp://{my_ip_address}:{port}")
             port_not_bound = False
         except Exception as e:
             print(e)
             port = random.randint(5555, 6555)
+            count += 1
+    if port_not_bound:
+        print("Failed to bind port, exiting")
+        exit(1)
 
     time.sleep(random.random())
-    session, api_key_hash = login_and_register_public_key(name, password, public_key.decode('ascii'), port)
-
+    session = login_or_register(name, password)                                                         
+    api_key_hash = register_public_key(session, public_key.decode('ascii'), port, lan_ip=my_ip_address)
     time.sleep(5)
-
     node_database = download_node_database(session)
     logout_and_close(session)
 
@@ -50,7 +56,8 @@ def run_node(name, lock, counter):
         client.curve_publickey = public_key
         client.curve_serverkey = info["public_key"].encode('ascii')
         client_port = info["port"]
-        client.connect(f"tcp://192.168.8.179:{client_port}")
+        client_ip = info["lan_ip_address"]
+        client.connect(f"tcp://{client_ip}:{client_port}")
         clients[other_keyhash] = client
 
     # Sending pings
