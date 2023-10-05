@@ -199,7 +199,8 @@ def activate_api_key(username, api_key, data=None):
     api_key_hash = sec.hash_api_key_truncate_64(api_key)
     node_database[api_key_hash] = {
         "username": username,
-        "address": f"tcp://{ip_address}:{port}",
+        "ip_address": ip_address,
+        "port": port,
         "public_key": public_key
     }
 

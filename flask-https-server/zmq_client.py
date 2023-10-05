@@ -1,5 +1,4 @@
 import zmq
-import time
 from multiprocessing import Process, Value, Lock
 import sys
 

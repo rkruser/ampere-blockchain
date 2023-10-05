@@ -20,9 +20,8 @@ client_number = None
 
 
 
-def login_and_register_public_key(user, passw, public_key, port, session=None):
-    if session is None:
-        session = requests.Session()
+def login_and_register_public_key(user, passw, public_key, port):
+    session = requests.Session()
 
     data = {
         "username": user,
@@ -59,7 +58,7 @@ def login_and_register_public_key(user, passw, public_key, port, session=None):
         exit(1)
     print(response.json().get("message", ""))
 
-    return session
+    return session, api_key_hash
 
 def download_node_database(session):
     response = session.get(download_node_database_url)
@@ -68,11 +67,17 @@ def download_node_database(session):
         exit(1)
     return response.json().get("node_database", None)
 
-def client5():
-    session = login_and_register_public_key(username, password, "here_is_key", 5000)
-    node_database = download_node_database(session)
-    session.get(logout_url)
+def logout_and_close(session):
+    response = session.get(logout_url)
     session.close()
+    if response.status_code != 200:
+        print("Logout failed")
+        exit(1)
+
+def client5():
+    session, _ = login_and_register_public_key(username, password, "here_is_key", 5000)
+    node_database = download_node_database(session)
+    logout_and_close(session)
     print(node_database)
 
 def client4():
