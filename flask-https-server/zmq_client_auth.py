@@ -23,7 +23,7 @@ def run_node(name, lock, counter):
     port_not_bound = True
     while port_not_bound:
         try:
-            server.bind(f"tcp://127.0.0.1:{port}")
+            server.bind(f"tcp://192.168.8.179:{port}")
             port_not_bound = False
         except Exception as e:
             print(e)
@@ -50,7 +50,7 @@ def run_node(name, lock, counter):
         client.curve_publickey = public_key
         client.curve_serverkey = info["public_key"].encode('ascii')
         client_port = info["port"]
-        client.connect(f"tcp://127.0.0.1:{client_port}")
+        client.connect(f"tcp://192.168.8.179:{client_port}")
         clients[other_keyhash] = client
 
     # Sending pings
