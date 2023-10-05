@@ -2,6 +2,8 @@ import requests
 import time
 import json
 
+from utils import get_lan_ip, get_remote_ip
+
 base_url = "https://ryenandvivekstartup.online"
 login_url = base_url + "/login"
 home_url = base_url + "/home"
@@ -50,7 +52,9 @@ def login_and_register_public_key(user, passw, public_key, port):
     activation_data = {
         "api_key": api_key,
         "node_port": port,
-        "public_key": public_key
+        "public_key": public_key,
+        "lan_ip_address": get_lan_ip(),
+        "remote_ip_address": get_remote_ip(),
     }
     response = session.post(activate_api_key_url, json=activation_data)
     if response.status_code != 200:

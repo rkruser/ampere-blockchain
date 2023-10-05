@@ -107,12 +107,17 @@ def activate_api_key():
         return jsonify({"message": status}), 401
     api_key = request.json.get('api_key')
 
-    client_ip = request.remote_addr
-    node_port = request.json.get('node_port',None)
-    public_key = request.json.get('public_key',None)
+    #client_ip = request.remote_addr
+    client_lan_ip = request.json.get('lan_ip_address')
+    client_remote_ip = request.json.get('remote_ip_address')
+    node_port = request.json.get('node_port')
+    public_key = request.json.get('public_key')
     data = None
     if (public_key is not None) and (node_port is not None):
-        data = {"ip_address": client_ip, "port": node_port, "public_key": public_key}
+        data = {"lan_ip_address": client_lan_ip,
+                "remote_ip_address": client_remote_ip,
+                "port": node_port,
+                "public_key": public_key}
 
     try:
         db.activate_api_key(username, api_key, data=data)

@@ -193,13 +193,15 @@ def activate_api_key(username, api_key, data=None):
         raise ValueError("No activation data provided")
     _api_key_database[api_key]["activated"] = True
     _api_key_database[api_key]["activator_username"] = username
-    ip_address = data["ip_address"]
+    lan_ip_address = data["lan_ip_address"]
+    remote_ip_address = data["remote_ip_address"]
     port = data["port"]
     public_key = data["public_key"]
     api_key_hash = sec.hash_api_key_truncate_64(api_key)
     node_database[api_key_hash] = {
         "username": username,
-        "ip_address": ip_address,
+        "lan_ip_address": lan_ip_address,
+        "remote_ip_address": remote_ip_address,
         "port": port,
         "public_key": public_key
     }
