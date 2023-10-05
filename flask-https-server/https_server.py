@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session
 import database as db
 import security as sec
 import ssl
@@ -33,8 +33,11 @@ def register():
 
     return jsonify({"message": "Registration success! Please login."}), 200
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+
     username = request.json.get('username')
     password = request.json.get('password')
     client_ip = request.remote_addr

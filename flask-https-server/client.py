@@ -20,7 +20,7 @@ username = None
 password = None
 client_number = None
 
-def login_or_register(user, passw, invitation_code=None):
+def login_or_register(user, passw, invitation_code=None, attempt_to_register_on_failed_login=True):
     session = requests.Session()
     data = {
         "username": user,
@@ -28,19 +28,24 @@ def login_or_register(user, passw, invitation_code=None):
     }
     response = session.post(login_url, json=data)
     if response.status_code != 200:
-        print(f"Login failed, trying to register {user}")
-        registration_data = data.copy()
-        invite = "basic_invite"
-        if invitation_code is not None:
-            invite = invitation_code
-        registration_data["invitation_code"] = invite
-        response = session.post(register_url, json=registration_data)
-        if response.status_code != 200:
-            print("Registration failed, exiting")
-            session.close()
-            exit(1)
-        response = session.post(login_url, json=data)
-        if response.status_code != 200:
+        if attempt_to_register_on_failed_login:
+            #print(f"Login failed, trying to register {user}")
+            registration_data = data.copy()
+            invite = "basic_invite"
+            if invitation_code is not None:
+                invite = invitation_code
+            registration_data["invitation_code"] = invite
+            response = session.post(register_url, json=registration_data)
+            if response.status_code != 200:
+                print("Registration failed, exiting")
+                session.close()
+                exit(1)
+            response = session.post(login_url, json=data)
+            if response.status_code != 200:
+                print("Login failed, exiting")
+                session.close()
+                exit(1)
+        else:
             print("Login failed, exiting")
             session.close()
             exit(1)
@@ -49,7 +54,7 @@ def login_or_register(user, passw, invitation_code=None):
 def register_public_key(session, public_key, port, lan_ip=None, remote_ip=None):
     response = session.post(request_api_key_url, json={"license_name": "standard_license"})
     if response.status_code != 200:
-        print("Request API key failed")
+        print("Request API key failed, exiting")
         exit(1)
     api_key = response.json().get("api_key", None)
     api_key_hash = response.json().get("api_key_hash", None)
@@ -66,7 +71,6 @@ def register_public_key(session, public_key, port, lan_ip=None, remote_ip=None):
         print("Activation failed, exiting")
         session.close()
         exit(1)
-    print(response.json().get("message", ""))
 
     return api_key_hash
 
