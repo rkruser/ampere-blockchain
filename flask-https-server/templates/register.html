@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div>
+        <h2>Login</h2>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <br>
+            <label for="invite">Invitation Code:</label>
+            <input type="text" id="invite" name="invite" required>
+            <br>
+            <input type="submit" value="Login">
+        </form>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            $("#loginForm").submit(function(event){
+                event.preventDefault();
+
+                var formData = {
+                    "username": $("#username").val(),
+                    "password": $("#password").val(),
+                    "invitation_code": $("#invite").val()
+                };
+
+                $.ajax({
+                    type: "POST",
+                    url: "/register",
+                    data: JSON.stringify(formData),
+                    contentType: "application/json",
+                    dataType: "json",
+                    success: function(response, textStatus, xhr) {
+                        if (xhr.status == 200) {
+                            window.location.href = "/login";
+                        } else {
+                            $("#response").text(response.message);
+                        }
+                    },
+                    error: function(error){
+                        $("#response").text(error.responseJSON.message);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

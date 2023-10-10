@@ -15,8 +15,11 @@ db.add_user("admin", "password", permission_level="admin")
 def index():
     return render_template('index.html')
 
-@app.route('/register', methods=['POST'])
+@app.route('/register', methods=['Get', 'POST'])
 def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+
     username = request.json.get('username')
     password = request.json.get('password')
     invitation_code = request.json.get('invitation_code')
