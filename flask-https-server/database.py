@@ -1,6 +1,23 @@
 import security as sec
 import time
 
+
+"""
+To Do:
+
+- Make a database interface class
+- Have module functions to instantiate class with choice of backend (e.g., basic_dict, redis, Azure databases, mySQL, etc.)
+- Have backend-specific functions to bind to the given backend, if necessary (or load files, etc.)
+- *Think about thread safety of database
+- Think about caching/updating using the database
+- Think about backing up the database
+- Think about encrypting/securing the database
+
+"""
+
+
+
+
 _invitation_database = set()
 _user_database = {}
 _session_database = {}
