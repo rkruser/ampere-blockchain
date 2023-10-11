@@ -5,6 +5,14 @@ from cryptography.exceptions import InvalidKey
 import os
 import base64
 
+
+# Later todo:
+#  Figure out how to securely zero out the private keys and other secrets
+#  Perhaps write C code to do this, and call it from Python
+#  Use Docker to provide consistent C development environment
+
+
+
 # Encode is bytes to string
 # Decode is string to bytes
 ENCODING_SCHEMES = {
