@@ -107,39 +107,53 @@ def verify_session():
         return None, "Session expired or invalid"
     return username, "success"
 
-@app.route('/add_user_license', methods=['POST'])
+@app.route('/add_user_license', methods=['GET', 'POST'])
 def add_user_license():
     username, status = verify_session()
     if status != "success":
         return jsonify({"message": status}), 401
+    
+    if request.method == 'GET':
+        return render_template('add_user_license.html', username=username)
+
     license_name = request.json.get('license_name')
     try:
         db.add_user_license(username, license_name)
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
-    return jsonify({"message": f"Added license {license_name}"}), 200
+    return jsonify({"message": f"Added license {license_name} to {username}'s account."}), 200
 
-@app.route('/request_api_key', methods=['POST'])
+@app.route('/request_api_key', methods=['GET', 'POST'])
 def request_api_key():
     username, status = verify_session()
     if status != "success":
         return jsonify({"message": status}), 401
+    
+    if request.method == 'GET':
+        return render_template('request_api_key.html', username=username)
+
     license_name = request.json.get('license_name')
     try:
         api_key = db.request_api_key(username, license_name)
+        api_key_hash = sec.hash_api_key_truncate_64(api_key)
+        print(api_key)
+        print(type(api_key))
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
-    return jsonify({"message": "Successfully added API key",
+    return jsonify({"message": f"Successfully added API key under license {license_name} to {username}'s account.",
                     "api_key": api_key,
-                    "api_key_hash":sec.hash_api_key_truncate_64(api_key)}), 200
+                    "api_key_hash":api_key_hash}), 200
 
-@app.route('/activate_api_key', methods=['POST'])
+@app.route('/activate_api_key', methods=['GET', 'POST'])
 def activate_api_key():
     username, status = verify_session() #Someone has to be logged in, doesn't matter who
     if status != "success":
         return jsonify({"message": status}), 401
-    api_key = request.json.get('api_key')
+    
+    if request.method == 'GET':
+        return render_template('activate_api_key.html', username=username)
 
+    api_key = request.json.get('api_key')
     #client_ip = request.remote_addr
     client_lan_ip = request.json.get('lan_ip_address')
     client_remote_ip = request.json.get('remote_ip_address')

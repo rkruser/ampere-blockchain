@@ -24,45 +24,39 @@
     </div>
 
     <div>
-        <h2>Register</h2>
-        <form id="registrationForm">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" required>
+        <h2>Add API key for user {{username}}</h2>
+        <form id="requestAPIKey">
+            <label for="license_name">License for API Key:</label>
+            <input type="text" id="license_name" name="license_name" required>
             <br>
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" required>
-            <br>
-            <label for="invite">Invitation Code:</label>
-            <input type="text" id="invite" name="invite" required>
-            <br>
-            <input type="submit" value="Register">
+            <input type="submit" value="Request API Key For License">
         </form>
-        <div id="response"></div>
+        <div>
+            <div><div>Response:</div><div id="response"></div></div>
+            <div><div>API Key:</div><div id="api_key"></div></div>
+            <div><div>API Key Hash:</div><div id="api_key_hash"></div></div>
+        </div>
     </div>
 
     <script>
         $(document).ready(function(){
-            $("#registrationForm").submit(function(event){
+            $("#requestAPIKey").submit(function(event){
                 event.preventDefault();
 
                 var formData = {
-                    "username": $("#username").val(),
-                    "password": $("#password").val(),
-                    "invitation_code": $("#invite").val()
+                    "license_name": $("#license_name").val()
                 };
 
                 $.ajax({
                     type: "POST",
-                    url: "/register",
+                    url: "/request_api_key",
                     data: JSON.stringify(formData),
                     contentType: "application/json",
                     dataType: "json",
                     success: function(response, textStatus, xhr) {
-                        if (xhr.status == 200) {
-                            window.location.href = "/login";
-                        } else {
-                            $("#response").text(response.message);
-                        }
+                        $("#response").text(response.message);
+                        $("#api_key").text(response.api_key);
+                        $("#api_key_hash").text(response.api_key_hash);
                     },
                     error: function(error){
                         $("#response").text(error.responseJSON.message);
