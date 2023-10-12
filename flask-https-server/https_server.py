@@ -18,6 +18,14 @@ To Do:
 
 7. Then, more stuff with ZMQ networking
 
+
+
+----
+
+Add logout success and registration success intermediate pages
+Add the csrf stuff to the non-login forms
+
+
 """
 
 
@@ -93,9 +101,16 @@ def logout():
     session_key = session.get('session_key', None)
     status = db.logout_user(session_key)
     session.pop('session_key', None) # Remove the session key from the flask server session
+    message = None
     if not status:
-        return jsonify({"message": "Already logged out."}), 200
-    return jsonify({"message": "Logout success!"}), 200
+        message = "Already logged out"
+    else:
+        message = "Logout success"
+
+    if request.method == 'GET':
+        return render_template('logout.html', message=message)
+    
+    return jsonify({"message": message}), 200
 
 def verify_session():
     session_key = session.get('session_key', None)
