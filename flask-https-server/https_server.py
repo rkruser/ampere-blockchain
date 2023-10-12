@@ -24,7 +24,9 @@ To Do:
 
 Add logout success and registration success intermediate pages
 Add the csrf stuff to the non-login forms
-
+Add sendgrid 2FA to registration page
+Add prove you're human to registration page
+(Limit number of registration attempts per IP address)
 
 """
 
