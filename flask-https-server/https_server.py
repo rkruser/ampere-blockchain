@@ -1,7 +1,26 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import database as db
 import security as sec
 import ssl
+
+
+"""
+To Do:
+
+0. Improve web pages on server to make them more navigable
+1. Persist flask server secret key in database (and persist database)
+2. Store logged in session keys mapped to the identity of the flask server secret key used to generate them (such as the hash of that key). If a client provides session keys not mapped to current secret key, make them log in again. (*Actually, may not be necessary, since flask won't be able to decrypt the old session keys with the new secret key anyway)
+3. Persist session cookies and usernames/passwords on client side.
+4. Add CSRF tokens for individual sessions/post requests (mainly for browser security to prevent post requests made by other sites)
+5. Set cookie flags for maximum security, and define an explicit content-security-policy (CSP) with whitelisting. (Again, mainly for browser security.)
+
+6. Add "prove you're human" stuff to registration page (how would automatic app registration deal with this? Invitation codes? Make app instances only able to login, not to register?)
+
+7. Then, more stuff with ZMQ networking
+
+"""
+
+
 
 app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
@@ -11,9 +30,21 @@ db.add_user("user1", "password1")
 
 db.add_user("admin", "password", permission_level="admin")
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('index.html')
+    username, status = verify_session()
+    welcome_message = 'Welcome to the homepage!'
+    if status == "success":
+        welcome_message = f'Welcome home, {username}!'
+
+    if request.method == 'GET':
+        return render_template('index.html', welcome_message=welcome_message)
+    
+    return jsonify({"message": welcome_message}), 200
+
+@app.route('/home', methods=['GET', 'POST'])
+def home():
+    return redirect(url_for('index'))
 
 @app.route('/register', methods=['Get', 'POST'])
 def register():
@@ -38,6 +69,10 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    username, status = verify_session()
+    if status == "success":
+        return jsonify({"message": f"Already logged in as {username}; please logout first if you want to login to a different account."}), 200
+
     if request.method == 'GET':
         return render_template('login.html')
 
@@ -71,14 +106,6 @@ def verify_session():
     if username is None:
         return None, "Session expired or invalid"
     return username, "success"
-
-@app.route('/home', methods=['GET', 'POST'])
-def home():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
-
-    return jsonify({"message": f"Welcome home, {username}!"}), 200
 
 @app.route('/add_user_license', methods=['POST'])
 def add_user_license():

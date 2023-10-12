@@ -8,8 +8,21 @@
 </head>
 <body>
     <div>
-        <h2>Login</h2>
-        <form id="loginForm">
+        <ul>
+            <li><a href="/">Root</a></li>
+            <li><a href="/home">Home</a></li>
+            <li><a href="/login">Login</a></li>
+            <li><a href="/register">Register</a></li>
+            <li><a href="/logout">Logout</a></li>
+            <li><a href="/server_status">Server Status</a></li>
+            <li><a href="/visualize">Visualize</a></li>
+            <li><a href="/userlist">User List</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Register</h2>
+        <form id="registrationForm">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
             <br>
@@ -19,14 +32,14 @@
             <label for="invite">Invitation Code:</label>
             <input type="text" id="invite" name="invite" required>
             <br>
-            <input type="submit" value="Login">
+            <input type="submit" value="Register">
         </form>
         <div id="response"></div>
     </div>
 
     <script>
         $(document).ready(function(){
-            $("#loginForm").submit(function(event){
+            $("#registrationForm").submit(function(event){
                 event.preventDefault();
 
                 var formData = {
