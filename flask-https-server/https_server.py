@@ -69,10 +69,8 @@ db.add_user("admin", "password", permission_level="admin")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    username, status = verify_session()
-    welcome_message = 'Welcome to the homepage!'
-    if status == "success":
-        welcome_message = f'Welcome home, {username}!'
+    username = session['username']
+    welcome_message = f'Welcome home, {username}!'
 
     if request.method == 'GET':
         return render_template('index.html', welcome_message=welcome_message)
@@ -106,8 +104,8 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    username, status = verify_session()
-    if status == "success":
+    username = session.get('username', None)
+    if username is not None:
         return jsonify({"message": f"Already logged in as {username}; please logout first if you want to login to a different account."}), 200
 
     if request.method == 'GET':
@@ -134,6 +132,7 @@ def login():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(days=1)
     
+    session['username'] = username
     session['session_key'] = session_key
     return jsonify({"message": "Login success!"}), 200
 
@@ -142,6 +141,7 @@ def logout():
     session_key = session.get('session_key', None)
     status = db.logout_user(session_key)
     session.pop('session_key', None) # Remove the session key from the flask server session
+    session.pop('username', None) # Remove the username from the flask server session
     message = None
     if not status:
         message = "Already logged out"
@@ -155,12 +155,15 @@ def logout():
 
 def verify_session():
     session_key = session.get('session_key', None)
+    session_username = session.get('username', None)
     if session_key is None:
         return None, "Not logged in"
     client_ip = request.remote_addr
     username = db.verify_session_key(client_ip, session_key)
     if username is None:
         return None, "Session expired or invalid"
+    if username != session_username:
+        return None, "Session username does not match session key"
     return username, "success"
 
 
@@ -194,18 +197,13 @@ def verify_csrf_token(user_provided_token, delete=False):
 
 @app.route('/get_csrf_token', methods=['GET'])
 def get_csrf_token():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
     token = add_csrf_token_to_session()
     return jsonify({"csrf_token": token}), 200
 
 
 @app.route('/add_user_license', methods=['GET', 'POST'])
 def add_user_license():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
+    username = session['username']
     
     if request.method == 'GET':
         return render_template('add_user_license.html', username=username, csrf_token=add_csrf_token_to_session())
@@ -227,9 +225,7 @@ def add_user_license():
 
 @app.route('/request_api_key', methods=['GET', 'POST'])
 def request_api_key():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
+    username = session['username']
     
     if request.method == 'GET':
         return render_template('request_api_key.html', username=username, csrf_token=add_csrf_token_to_session())
@@ -254,9 +250,7 @@ def request_api_key():
 
 @app.route('/activate_api_key', methods=['GET', 'POST'])
 def activate_api_key():
-    username, status = verify_session() #Someone has to be logged in, doesn't matter who
-    if status != "success":
-        return jsonify({"message": status}), 401
+    username = session['username']
     
     if request.method == 'GET':
         return render_template('activate_api_key.html', username=username, csrf_token=add_csrf_token_to_session())
@@ -287,11 +281,7 @@ def activate_api_key():
 
 
 @app.route('/get_node_database', methods=['GET', 'POST'])
-def get_node_database():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
-    
+def get_node_database():    
     return jsonify({"message": "Here are the nodes!",
                     "node_database": db.node_database,
                     }), 200
@@ -299,9 +289,7 @@ def get_node_database():
 
 @app.route('/server_status', methods=['GET', 'POST'])
 def server_status():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
+    username = session['username']
     
     if not db.has_admin_permissions(username):
         return jsonify({"message": "You do not have permission to view this page"}), 401
@@ -324,19 +312,12 @@ def server_status():
 
 
 @app.route('/visualize')
-def visualize():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401
-    
+def visualize():    
     graph_data = db.convert_to_cytoscape_data(db.node_database)
     return render_template('visualize.html', graph_data=graph_data)
 
 @app.route('/userlist')
-def user_list():
-    username, status = verify_session()
-    if status != "success":
-        return jsonify({"message": status}), 401    
+def user_list():    
     user_data = db.preprocess_user_data(db._user_database)
     return render_template('userlist.html', user_data=user_data)
 
