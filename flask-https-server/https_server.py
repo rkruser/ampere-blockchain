@@ -31,6 +31,14 @@ Add sendgrid 2FA to registration page
 Add prove you're human to registration page
 (Limit number of registration attempts per IP address)
 
+
+----
+
+Consider removing javascript from login form and other forms
+NOTE: login protections apparently don't work on the files in "static"; don't put secrets in static folder
+
+
+
 """
 
 
