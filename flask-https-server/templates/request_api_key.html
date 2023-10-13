@@ -29,6 +29,7 @@
             <input type="text" id="license_name" name="license_name" required>
             <br>
             <input type="submit" value="Request API Key For License">
+            <input type="hidden" id="csrf_token" name="csrf_token" value="{{csrf_token}}">
         </form>
         <div>
             <div><div>Response:</div><div id="response"></div></div>
@@ -43,7 +44,8 @@
                 event.preventDefault();
 
                 var formData = {
-                    "license_name": $("#license_name").val()
+                    "license_name": $("#license_name").val(),
+                    "csrf_token": $("#csrf_token").val()
                 };
 
                 $.ajax({

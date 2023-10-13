@@ -4,7 +4,7 @@ import security as sec
 import ssl
 import argparse
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 
 """
@@ -111,6 +111,7 @@ def login():
     
     # Note! You need to set the session permanency as follows, not as above. Perhaps it is mainly because you need to use
     #  the session.permanent object, not the app.config object, to set permanency.
+    # Also, need to be within a request context to set the session.permanent object, I think
     session.permanent = True
     app.permanent_session_lifetime = timedelta(days=1)
     
@@ -143,6 +144,44 @@ def verify_session():
         return None, "Session expired or invalid"
     return username, "success"
 
+
+
+
+def add_csrf_token_to_session(minutes_to_expiration=15):
+    token = sec.generate_csrf_token()
+    expiration_time = datetime.utcnow() + timedelta(minutes=minutes_to_expiration)
+    session['csrf_token'] = token
+    session['csrf_token_expires'] = expiration_time.strftime('%Y-%m-%dT%H:%M:%SZ')  # ISO 8601 format
+    return token
+
+# Can delete tokens for the form to have a single use
+def verify_csrf_token(user_provided_token, delete=False):
+    if 'csrf_token' not in session:
+        return False, "CSRF token not found in session, reload page"
+    if 'csrf_token_expires' not in session:
+        return False, "CSRF token expiration time not found in session, reload page"
+    if datetime.utcnow() > datetime.strptime(session['csrf_token_expires'], '%Y-%m-%dT%H:%M:%SZ'):
+        del session['csrf_token']
+        del session['csrf_token_expires']
+        return False, "CSRF token expired, reload page"
+    if user_provided_token != session['csrf_token']:
+        del session['csrf_token']
+        del session['csrf_token_expires']
+        return False, "CSRF token invalid, reload page"
+    if delete:
+        del session['csrf_token']
+        del session['csrf_token_expires']
+    return True, "success"
+
+@app.route('/get_csrf_token', methods=['GET'])
+def get_csrf_token():
+    username, status = verify_session()
+    if status != "success":
+        return jsonify({"message": status}), 401
+    token = add_csrf_token_to_session()
+    return jsonify({"csrf_token": token}), 200
+
+
 @app.route('/add_user_license', methods=['GET', 'POST'])
 def add_user_license():
     username, status = verify_session()
@@ -150,14 +189,22 @@ def add_user_license():
         return jsonify({"message": status}), 401
     
     if request.method == 'GET':
-        return render_template('add_user_license.html', username=username)
+        return render_template('add_user_license.html', username=username, csrf_token=add_csrf_token_to_session())
+
+    csrf_token = request.json.get('csrf_token')
+    status, message = verify_csrf_token(csrf_token)
+    if not status:
+        return jsonify({"message": message}), 401
 
     license_name = request.json.get('license_name')
+
     try:
         db.add_user_license(username, license_name)
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
     return jsonify({"message": f"Added license {license_name} to {username}'s account."}), 200
+
+
 
 @app.route('/request_api_key', methods=['GET', 'POST'])
 def request_api_key():
@@ -166,9 +213,15 @@ def request_api_key():
         return jsonify({"message": status}), 401
     
     if request.method == 'GET':
-        return render_template('request_api_key.html', username=username)
+        return render_template('request_api_key.html', username=username, csrf_token=add_csrf_token_to_session())
 
+    csrf_token = request.json.get('csrf_token')
+    status, message = verify_csrf_token(csrf_token)
+    if not status:
+        return jsonify({"message": message}), 401
+    
     license_name = request.json.get('license_name')
+
     try:
         api_key = db.request_api_key(username, license_name)
         api_key_hash = sec.hash_api_key_truncate_64(api_key)
@@ -187,7 +240,12 @@ def activate_api_key():
         return jsonify({"message": status}), 401
     
     if request.method == 'GET':
-        return render_template('activate_api_key.html', username=username)
+        return render_template('activate_api_key.html', username=username, csrf_token=add_csrf_token_to_session())
+
+    csrf_token = request.json.get('csrf_token')
+    status, message = verify_csrf_token(csrf_token)
+    if not status:
+        return jsonify({"message": message}), 401
 
     api_key = request.json.get('api_key')
     #client_ip = request.remote_addr

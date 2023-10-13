@@ -83,6 +83,9 @@ def generate_salt(byte_length=32, scheme=DEFAULT_SCHEME):
 def generate_session_key(byte_length=16, scheme=DEFAULT_SCHEME):
     return scheme.encode(random_bytes(byte_length))
 
+def generate_csrf_token(byte_length=16, scheme=DEFAULT_SCHEME):
+    return scheme.encode(random_bytes(byte_length))
+
 def generate_api_key(byte_length=16, scheme=EncodingSchemes.hex):
     return scheme.encode(random_bytes(byte_length))
 
