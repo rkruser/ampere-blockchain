@@ -21,37 +21,8 @@
         </ul>
     </div>
 
-    <div id="cy" style="width: 100%; height: 1000px;"></div>
+    <div id="cy" style="width: 100%; height: 80vh;" data-graph='{{graph_data|tojson|safe}}'></div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function(){
-            var cy = cytoscape({
-                container: document.getElementById('cy'),
-
-                elements: {{ graph_data|tojson|safe }},
-                
-                style: [
-                    {
-                        selector: 'node',
-                        style: {
-                            'background-color': '#666',
-                            'label': 'data(label)'
-                        }
-                    },
-                    {
-                        selector: 'edge',
-                        style: {
-                            'width': 3,
-                            'line-color': '#ccc'
-                        }
-                    }
-                ],
-                
-                layout: {
-                    name: 'circle'
-                }
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='visualize.js') }}"></script>
 </body>
 </html>

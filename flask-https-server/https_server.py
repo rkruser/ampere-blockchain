@@ -39,10 +39,10 @@ app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
 
 
-"""
+
 csp_policy = ("default-src 'self'; "  # By default, only load resources from the same origin
               "script-src 'self' code.jquery.com cdnjs.cloudflare.com; "  # Whitelist CDN for scripts
-              "style-src 'self' cdn.styles.com; "  # Whitelist CDN for styles
+              "style-src 'self' cdn.styles.com 'unsafe-inline'; "  # Whitelist CDN for styles
               "img-src 'self' cdn.images.com; "  # Whitelist CDN for images
               "font-src *.fonts.com;"  # Allow fonts from any subdomain under fonts.com
              )
@@ -51,7 +51,7 @@ csp_policy = ("default-src 'self'; "  # By default, only load resources from the
 def add_csp_headers(response):
     response.headers['Content-Security-Policy'] = csp_policy
     return response
-"""
+
 
 
 db.add_invitation("basic_invite")
