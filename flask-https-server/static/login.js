@@ -15,7 +15,7 @@ $(document).ready(function(){
             dataType: "json",
             success: function(response, textStatus, xhr) {
                 if (xhr.status == 200) {
-                    window.location.href = "/home";
+                    window.location.href = "/";
                 } else {
                     $("#response").text(response.message);
                 }

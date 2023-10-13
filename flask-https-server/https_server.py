@@ -47,6 +47,14 @@ csp_policy = ("default-src 'self'; "  # By default, only load resources from the
               "font-src *.fonts.com;"  # Allow fonts from any subdomain under fonts.com
              )
 
+
+
+@app.before_request
+def require_login():
+    username, status = verify_session()
+    if status != "success" and request.endpoint not in ['login', 'register', 'static']:
+        return redirect(url_for('login'))
+
 @app.after_request
 def add_csp_headers(response):
     response.headers['Content-Security-Policy'] = csp_policy
