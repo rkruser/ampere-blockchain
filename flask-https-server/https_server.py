@@ -6,6 +6,11 @@ import argparse
 import json
 from datetime import datetime, timedelta
 
+#from flask_recaptcha import ReCaptcha
+
+
+
+
 
 """
 To Do:
@@ -46,14 +51,27 @@ NOTE: login protections apparently don't work on the files in "static"; don't pu
 app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
 
+#app.config['RECAPTCHA_SITE_KEY'] = '6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ'
+#app.config['RECAPTCHA_SECRET_KEY'] = '6LeT5JwoAAAAAJwDW1aLS-Ss65ZJJabvnO6hqKA5'
+#recaptcha = ReCaptcha(app=app)
+
+# Site key: 6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ
+# Secret key: 6LeT5JwoAAAAAJwDW1aLS-Ss65ZJJabvnO6hqKA5
+
+
+
 
 
 csp_policy = ("default-src 'self'; "  # By default, only load resources from the same origin
-              "script-src 'self' code.jquery.com cdnjs.cloudflare.com; "  # Whitelist CDN for scripts
+              "script-src 'self' code.jquery.com cdnjs.cloudflare.com www.google.com www.gstatic.com; "  # Whitelist CDN for scripts
               "style-src 'self' cdn.styles.com 'unsafe-inline'; "  # Whitelist CDN for styles
               "img-src 'self' cdn.images.com; "  # Whitelist CDN for images
               "font-src *.fonts.com;"  # Allow fonts from any subdomain under fonts.com
              )
+@app.after_request
+def add_csp_headers(response):
+    response.headers['Content-Security-Policy'] = csp_policy
+    return response
 
 
 
@@ -63,10 +81,6 @@ def require_login():
     if status != "success" and request.endpoint not in ['login', 'register', 'static']:
         return redirect(url_for('login'))
 
-@app.after_request
-def add_csp_headers(response):
-    response.headers['Content-Security-Policy'] = csp_policy
-    return response
 
 
 
@@ -92,11 +106,15 @@ def home():
 @app.route('/register', methods=['Get', 'POST'])
 def register():
     if request.method == 'GET':
+        #return render_template('register.html', recaptcha=recaptcha())
         return render_template('register.html')
 
     username = request.json.get('username')
     password = request.json.get('password')
     invitation_code = request.json.get('invitation_code')
+
+    #captcha_token = request.json.get('g-recaptcha-response')
+    #print("captcha_token:", captcha_token)
 
     # Check if the invitation code is valid
     if not db.verify_invitation(invitation_code):

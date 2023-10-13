@@ -1,11 +1,11 @@
 $(document).ready(function(){
     $("#registrationForm").submit(function(event){
         event.preventDefault();
-
         var formData = {
             "username": $("#username").val(),
             "password": $("#password").val(),
-            "invitation_code": $("#invite").val()
+            "invitation_code": $("#invite").val(),
+            //'g-recaptcha-response': $("#g-recaptcha-response").val()
         };
 
         $.ajax({
@@ -24,6 +24,8 @@ $(document).ready(function(){
             error: function(error){
                 $("#response").text(error.responseJSON.message);
             }
-        });
+        })
+
+
     });
 });
