@@ -39,8 +39,19 @@ app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
 
 
+"""
+csp_policy = ("default-src 'self'; "  # By default, only load resources from the same origin
+              "script-src 'self' code.jquery.com cdnjs.cloudflare.com; "  # Whitelist CDN for scripts
+              "style-src 'self' cdn.styles.com; "  # Whitelist CDN for styles
+              "img-src 'self' cdn.images.com; "  # Whitelist CDN for images
+              "font-src *.fonts.com;"  # Allow fonts from any subdomain under fonts.com
+             )
 
-
+@app.after_request
+def add_csp_headers(response):
+    response.headers['Content-Security-Policy'] = csp_policy
+    return response
+"""
 
 
 db.add_invitation("basic_invite")
@@ -337,4 +348,4 @@ if __name__ == '__main__':
         app.run(ssl_context=context, host='0.0.0.0', debug=True, port=3000)
 
     else:
-        app.run(host='127.0.0.1', debug=False, port=3333)
+        app.run(host='127.0.0.1', debug=True, port=3333)
