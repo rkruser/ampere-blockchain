@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import database as db
 import security as sec
 import ssl
+import argparse
+import json
+from datetime import timedelta
 
 
 """
@@ -34,6 +37,11 @@ Add prove you're human to registration page
 
 app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
+
+
+
+
+
 
 db.add_invitation("basic_invite")
 db.add_user("user1", "password1")
@@ -95,6 +103,17 @@ def login():
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
     # Set the session key in the session
+    app.config['SESSION_COOKIE_SECURE'] = True #Set cookie flags for maximum security
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+    #app.config['SESSION_PERMANENT'] = True #Persist session cookies
+    #app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1) #Persist session cookies for 1 hour
+    
+    # Note! You need to set the session permanency as follows, not as above. Perhaps it is mainly because you need to use
+    #  the session.permanent object, not the app.config object, to set permanency.
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(days=1)
+    
     session['session_key'] = session_key
     return jsonify({"message": "Login success!"}), 200
 
@@ -210,14 +229,21 @@ def server_status():
     if not db.has_admin_permissions(username):
         return jsonify({"message": "You do not have permission to view this page"}), 401
     
-    return jsonify({"message": "Server is up!",
+    server_data = {"message": "Server is up!",
                     "invitation_database": db.convert_sets_to_lists(db._invitation_database),
                     "user_database": db.convert_sets_to_lists(db._user_database),
                     "session_database": db.convert_sets_to_lists(db._session_database),
                     "license_database": db.convert_sets_to_lists(db.license_database),
                     "api_key_database": db.convert_sets_to_lists(db._api_key_database),
                     "node_database": db.node_database
-                    }), 200
+                    }
+
+    if request.method == 'GET':
+        pretty_json = json.dumps(server_data, indent=4)
+        #escaped_json = html.escape(pretty_json) #no need for this since flask auto-escapes
+        return render_template('server_status.html', server_status=pretty_json)
+
+    return jsonify(server_data), 200
 
 
 @app.route('/visualize')
@@ -240,15 +266,17 @@ def user_list():
 
 
 if __name__ == '__main__':
-    ssl_context = {
-        'keyfile': 'C:/Certbot/live/ryenandvivekstartup.online/privkey.pem',
-        'certfile': 'C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem',
-        'cert_reqs': ssl.CERT_OPTIONAL
-    }
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--use_ssl', action='store_true')
+    args = parser.parse_args()
 
-    # These paths should really be in a .env file that is configured to the host computer
-    app.run(ssl_context=('C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem', 
-                         'C:/Certbot/live/ryenandvivekstartup.online/privkey.pem'), 
-                         host='0.0.0.0', 
-                         debug=True, 
-                         port=3000)
+    if args.use_ssl:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2) #Change to v1_3 when available
+        context.load_cert_chain(certfile='C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem', 
+                                keyfile='C:/Certbot/live/ryenandvivekstartup.online/privkey.pem')
+        #context.verify_mode = ssl.CERT_OPTIONAL
+
+        app.run(ssl_context=context, host='0.0.0.0', debug=True, port=3000)
+
+    else:
+        app.run(host='127.0.0.1', debug=False, port=3333)
