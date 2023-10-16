@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
 </head>
 <body>
     <div>
@@ -26,6 +29,8 @@
             <br>
             <label for="invite">Invitation Code:</label>
             <input type="text" id="invite" name="invite" required>
+            <br>
+            <div class="g-recaptcha" data-sitekey="6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ"></div>
             <br>
             <input type="submit" value="Register">
         </form>

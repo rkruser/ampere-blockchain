@@ -20,6 +20,7 @@ To Do:
 
 _invitation_database = set()
 _user_database = {}
+_temp_user_database = {}
 _session_database = {}
 _api_key_database = {}
 
@@ -59,6 +60,41 @@ def add_user(username, password, permission_level="user"):
         "permissions": permission_level
     }
     return True
+
+
+def add_temp_user(username, password, permission_level="user"):
+    if username in _user_database:
+        raise ValueError("User already exists")
+    salt = sec.generate_salt()
+    password_hash = sec.hash_password(password, salt)
+    temp_user_id = sec.generate_salt()
+    _temp_user_database[temp_user_id] = (
+        username, 
+        time.time() + 900, 
+        str(sec.generate_code()), {
+        "salt": salt,
+        "password_hash": password_hash,
+        "ip_sessions": {},
+        "licenses": {
+            "standard_license": set()
+        },
+        "permissions": permission_level
+    })
+    return temp_user_id
+
+def verify_and_add_temp_user(temp_user_id, user_code_input):
+    if temp_user_id not in _temp_user_database:
+        return False
+    username, expiration, code, data = _temp_user_database[temp_user_id]
+    if expiration < time.time():
+        del _temp_user_database[temp_user_id]
+        return False
+    if user_code_input != code:
+        return False
+    del _temp_user_database[temp_user_id]
+    _user_database[username] = data
+    return True
+
 
 def has_admin_permissions(username):
     if username not in _user_database:

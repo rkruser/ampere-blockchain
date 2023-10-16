@@ -5,7 +5,7 @@ $(document).ready(function(){
             "username": $("#username").val(),
             "password": $("#password").val(),
             "invitation_code": $("#invite").val(),
-            //'g-recaptcha-response': $("#g-recaptcha-response").val()
+            'g-recaptcha-response': $("#g-recaptcha-response").val()
         };
 
         $.ajax({
@@ -14,18 +14,16 @@ $(document).ready(function(){
             data: JSON.stringify(formData),
             contentType: "application/json",
             dataType: "json",
-            success: function(response, textStatus, xhr) {
-                //if (xhr.status == 200) {
-                //    window.location.href = "/login";
-                //} else {
-                $("#response").text(response.message);
-                //}
+            success: function(response) {
+                if (response.redirect_url) {
+                    window.location.href = response.redirect_url;  // Redirect the user
+                } else if (response.message) {
+                    $("#response").text(response.message);
+                }
             },
-            error: function(error){
-                $("#response").text(error.responseJSON.message);
+            error: function(jqXHR, textStatus, errorThrown) {
+                $("#response").text(jqXHR.responseJSON.message || "An error occurred during registration.");
             }
         })
-
-
     });
 });

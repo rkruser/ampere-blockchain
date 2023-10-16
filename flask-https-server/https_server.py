@@ -5,6 +5,8 @@ import ssl
 import argparse
 import json
 from datetime import datetime, timedelta
+import requests
+import functools
 
 #from flask_recaptcha import ReCaptcha
 
@@ -51,8 +53,8 @@ NOTE: login protections apparently don't work on the files in "static"; don't pu
 app = Flask(__name__)
 app.secret_key = sec.generate_session_key()
 
-#app.config['RECAPTCHA_SITE_KEY'] = '6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ'
-#app.config['RECAPTCHA_SECRET_KEY'] = '6LeT5JwoAAAAAJwDW1aLS-Ss65ZJJabvnO6hqKA5'
+app.config['RECAPTCHA_SITE_KEY'] = '6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ'
+app.config['RECAPTCHA_SECRET_KEY'] = '6LeT5JwoAAAAAJwDW1aLS-Ss65ZJJabvnO6hqKA5'
 #recaptcha = ReCaptcha(app=app)
 
 # Site key: 6LeT5JwoAAAAAIDvqRrzCMQUteRFtSSvuAAOAdzQ
@@ -60,17 +62,18 @@ app.secret_key = sec.generate_session_key()
 
 
 
-
-
-csp_policy = ("default-src 'self'; "  # By default, only load resources from the same origin
+default_csp = ("default-src 'self'; "  # By default, only load resources from the same origin
               "script-src 'self' code.jquery.com cdnjs.cloudflare.com www.google.com www.gstatic.com; "  # Whitelist CDN for scripts
-              "style-src 'self' cdn.styles.com 'unsafe-inline'; "  # Whitelist CDN for styles
+              "style-src 'self' cdn.styles.com; "  # Whitelist CDN for styles
               "img-src 'self' cdn.images.com; "  # Whitelist CDN for images
               "font-src *.fonts.com;"  # Allow fonts from any subdomain under fonts.com
+              "frame-src www.google.com; " # Whitelist recaptcha
              )
+
+
 @app.after_request
 def add_csp_headers(response):
-    response.headers['Content-Security-Policy'] = csp_policy
+    response.headers['Content-Security-Policy'] = default_csp
     return response
 
 
@@ -78,7 +81,7 @@ def add_csp_headers(response):
 @app.before_request
 def require_login():
     username, status = verify_session()
-    if status != "success" and request.endpoint not in ['login', 'register', 'static']:
+    if status != "success" and request.endpoint not in ['login', 'register', 'static', 'complete_registration']:
         return redirect(url_for('login'))
 
 
@@ -103,7 +106,7 @@ def index():
 def home():
     return redirect(url_for('index'))
 
-@app.route('/register', methods=['Get', 'POST'])
+@app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
         #return render_template('register.html', recaptcha=recaptcha())
@@ -113,8 +116,24 @@ def register():
     password = request.json.get('password')
     invitation_code = request.json.get('invitation_code')
 
-    #captcha_token = request.json.get('g-recaptcha-response')
+    captcha_token = request.json.get('g-recaptcha-response')
     #print("captcha_token:", captcha_token)
+
+    # Use the requests library to query the recaptcha API with a post request
+    try:
+        response = requests.post('https://www.google.com/recaptcha/api/siteverify', 
+                                data={'secret': app.config['RECAPTCHA_SECRET_KEY'], 
+                                    'response': captcha_token,
+                                    'remoteip': request.remote_addr},
+                                    timeout=10)
+    except requests.exceptions.Timeout:
+        return jsonify({"message": "Recaptcha timed out"}), 401
+    
+    #print(response.json())
+
+    # Check if the recaptcha was successful
+    if not response.json().get('success'):
+        return jsonify({"message": "Recaptcha failed"}), 401
 
     # Check if the invitation code is valid
     if not db.verify_invitation(invitation_code):
@@ -122,11 +141,26 @@ def register():
 
     # Register the user
     try:
-        db.add_user(username, password)
+        temp_user_id = db.add_temp_user(username, password)
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
 
-    return jsonify({"message": "Registration success! Please login."}), 200
+    return jsonify({"message": "Registration started. Redirecting...", "redirect_url": url_for('complete_registration', temp_user_id=temp_user_id)}), 200
+
+
+#@app.route('/complete-registration/', defaults={'temp_user_id': None}, methods=['GET', 'POST'])
+@app.route('/complete-registration/<temp_user_id>', methods=['GET', 'POST'])
+def complete_registration(temp_user_id):
+    #print("Here in complete registration")
+    if request.method == 'GET':
+        #print("here in get ", temp_user_id)
+        return render_template('complete_registration.html', temp_id=temp_user_id)
+    temp_user_id = request.json.get('temp_id')
+    user_code_input = request.json.get('code')
+    if not db.verify_and_add_temp_user(temp_user_id, user_code_input):
+        return jsonify({"message": "Invalid or expired user code"}), 401
+    return jsonify({"message": "Registration success! Please log in."}), 200
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/login">Login</a></li>
+            <li><a href="/register">Register</a></li>
+        </ul>
+    </div>
+
+    <div>
+        <h2>Register</h2>
+        <form id="registrationForm">
+            <label for="code">Email Code:</label>
+            <input type="text" id="code" name="code" required>
+            <input type="hidden" id="temp_id" name="temp_id" value="{{temp_id}}">
+            <br>
+            <input type="submit" value="Submit Code">
+        </form>
+        <div id="response"></div>
+    </div>
+
+    <script src="{{url_for('static', filename='complete_registration.js')}}"></script>
+</body>
+</html>
