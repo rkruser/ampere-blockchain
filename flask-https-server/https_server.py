@@ -7,6 +7,7 @@ import json
 from datetime import datetime, timedelta
 import requests
 import functools
+import email_2fa as mail
 
 #from flask_recaptcha import ReCaptcha
 
@@ -113,6 +114,7 @@ def register():
         return render_template('register.html')
 
     username = request.json.get('username')
+    email = request.json.get('email')
     password = request.json.get('password')
     invitation_code = request.json.get('invitation_code')
 
@@ -141,9 +143,12 @@ def register():
 
     # Register the user
     try:
-        temp_user_id = db.add_temp_user(username, password)
+        temp_user_id, code = db.add_temp_user(username, password)
     except ValueError as e:
         return jsonify({"message": str(e)}), 401
+    
+    if not mail.send_email([email], "Verify your email address", f"Your verification code is {code}"):
+        return jsonify({"message": "Error sending email"}), 401
 
     return jsonify({"message": "Registration started. Redirecting...", "redirect_url": url_for('complete_registration', temp_user_id=temp_user_id)}), 200
 

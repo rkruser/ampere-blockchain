@@ -2,6 +2,7 @@ $(document).ready(function(){
     $("#registrationForm").submit(function(event){
         event.preventDefault();
         var formData = {
+            "email": $("#email").val(),
             "username": $("#username").val(),
             "password": $("#password").val(),
             "invitation_code": $("#invite").val(),

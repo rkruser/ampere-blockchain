@@ -68,10 +68,11 @@ def add_temp_user(username, password, permission_level="user"):
     salt = sec.generate_salt()
     password_hash = sec.hash_password(password, salt)
     temp_user_id = sec.generate_salt()
+    code = str(sec.generate_code())
     _temp_user_database[temp_user_id] = (
         username, 
-        time.time() + 900, 
-        str(sec.generate_code()), {
+        time.time() + 900,
+        code, {
         "salt": salt,
         "password_hash": password_hash,
         "ip_sessions": {},
@@ -80,7 +81,7 @@ def add_temp_user(username, password, permission_level="user"):
         },
         "permissions": permission_level
     })
-    return temp_user_id
+    return temp_user_id, code
 
 def verify_and_add_temp_user(temp_user_id, user_code_input):
     if temp_user_id not in _temp_user_database:

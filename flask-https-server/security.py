@@ -83,8 +83,8 @@ def generate_salt(byte_length=32, scheme=DEFAULT_SCHEME):
 # Generate a random integer code for email verification
 def generate_code():
     # generate random bytes and convert to integer
-    #return int.from_bytes(random_bytes(3))
-    return 4
+    return int.from_bytes(random_bytes(3))
+    #return 4
 
 def generate_session_key(byte_length=16, scheme=DEFAULT_SCHEME):
     return scheme.encode(random_bytes(byte_length))
