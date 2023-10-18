@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY ./app/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install nginx and copy configuration
+RUN apt-get update && apt-get install -y nginx && apt-get clean
+COPY ./docker/nginx/nginx.conf /etc/nginx/
+
+# Copy flask app
+COPY ./app /app
+
+#ENV PYTHONPATH=/app
+
+# Start gunicorn and nginx
+CMD ["bash", "-c", "gunicorn -w 4 -b 0.0.0.0:8000 main:app & nginx -g 'daemon off;'"]
+
