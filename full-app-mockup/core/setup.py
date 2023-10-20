@@ -8,5 +8,6 @@ setup(
     name="core",
     version="0.9",
     packages=find_packages(exclude=["tests*"]),
+    package_dir={"": "."},
     install_requires=read_requirements(),
 )

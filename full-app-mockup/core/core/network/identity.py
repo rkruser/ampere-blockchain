@@ -30,8 +30,8 @@ class Identity:
         self.database_port = int(self.config["database_port"])
         self.database_name = self.config["database_name"]
 
-        self.zmq_port = self.config["zmq_port"]
-        self.zmq_host = self.config["zmq_host"]
+        self.zmq_port = self.config.get("zmq_port", None)
+        self.zmq_host = self.config.get("zmq_host", None)
 
 
 

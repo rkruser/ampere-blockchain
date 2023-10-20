@@ -3,8 +3,10 @@ import random
 import string
 from .user_database_interface import UserDatabaseInterface
 from .mongo_database import MongoDatabase
+from ..security import generate_session_key
 
 class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
+    # database_info should be host, port, database_name
     def __init__(self, database_info):
         MongoDatabase.__init__(self, database_info)
         self.users = self.db['users']
@@ -18,7 +20,7 @@ class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
         if not user:
             return False  # or raise an appropriate error
 
-        session_id = self._generate_random_string()
+        session_id = generate_session_key()
         expiration_time = datetime.datetime.now() + datetime.timedelta(hours=24)
         
         with self.client.start_session() as session:
