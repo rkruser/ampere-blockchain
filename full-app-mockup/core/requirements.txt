@@ -1,2 +1,4 @@
 functools
 flask
+json
+pymongo
