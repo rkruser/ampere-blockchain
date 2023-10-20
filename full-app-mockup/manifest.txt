@@ -1,0 +1,134 @@
+Folder descriptions:
+
+documentation:
+    For documenting the codebase
+
+dockerfiles:
+    All the docker config files for the different services
+
+    files:
+        dockerfile-api_server.yml
+        dockerfile-dev_server.yml
+        dockerfile-identity_server.yml
+        dockerfile-node_server.yml
+        dockerfile-database_server.yml
+        dockerfile-cache_server.yml
+        docker-compose.yml
+
+config:
+    - Config files for app folders, URLs, API keys, etc.
+    - Help start docker nodes with environment variables and config files, etc.
+
+    files:
+        config.json
+
+core:
+    The core app functionality, a python module to be included in all docker nodes
+
+    files:
+        requirements.txt
+        setup.py
+        __init__.py
+
+core/tests:
+    For test cases of the modules
+
+core/ai:
+    AI interface logic
+
+core/configuration:
+    For reading/writing config files and providing the config to app instances
+
+core/analytics:
+    - For logging and tracking activity
+    - Can we provide wrappers to count function calls?
+
+core/blockchain:
+    Library of core blockchain logic
+
+    files:
+        __init__.py
+        blockchain.py
+
+core/network:
+    Provides information about the identity, purpose, and network location of all nodes.
+
+core/security:
+    Implements cryptography and signatures for all communication
+
+    files:
+        __init__.py
+        security.py
+
+core/server:
+    - For code quickly configuring flask server instances (such as in the outer "servers" directory).
+    - To reduce boilerplate in the code for each server
+    - Maybe provide wrappers for server routes to do different types of verification (including third-party 2FA and captcha)
+
+core/fhir:
+    FHIR interface logic Library
+
+core/database:
+    Library of database interface logic (to abstract away from servers)
+
+    files:
+        __init__.py
+        database.py
+
+servers:
+    The app servers for different cloud node types
+
+servers/api_server:
+    A python flask server that apps interface with to make API calls (e.g. to an AI)
+
+    files:
+        api_main.py
+
+servers/dev_server:
+    A python flask server to show the state of the nodes and databases
+
+    files:
+        dev_main.py
+
+servers/frontend_server:
+    For new users to register accounts and get API keys
+
+    files:
+        frontend_main.py
+
+servers/identity_server:
+    For nodes to self-locate and get info on the addresses of the other nodes
+
+    files:
+        identity_main.py
+
+servers/node_server:
+    - Implements the actual blockchain/FHIR logic (using ZMQ for direct communication)
+    - Can either be admin server or proposer server
+
+    files:
+        node_main.py
+
+sites:
+    - For static html files and pre-generated html templates.
+    - Sites should be imported into servers when docker nodes are constructed.
+    - Use node.js + react + webpack for this part of development?
+
+serverless:
+    - Eventually, for any code run in a serverless environment, like possibly AI calls
+
+desktop_frontend:
+    - Eventually for any desktop apps built on top of this, like an Electron app or a python tkinter app.
+    - If using electron/node, have setup scripts and all node setup environment inside this directory
+
+scripts:
+    For general scripts to help with development
+
+
+
+    Types of Secrets:
+
+    - Flask server secret key
+    - Public/Private keys for web servers
+    - ZMQ Curve keys
+    - API keys
