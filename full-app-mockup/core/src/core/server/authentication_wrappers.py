@@ -37,6 +37,14 @@ class AuthenticationManager:
         self.database = database
         self.third_party = third_party
 
+    def login_user(self, username, password):
+        success, session_id = self.database.login_user(username, password)
+        if success:
+            session['authenticated'] = True
+            session['username'] = username
+            session['session_id'] = session_id
+        return success
+
     def login_session_required(self, f, failure_response=None, use_redirect=True, redirect_to='login'):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -69,6 +77,15 @@ class AuthenticationManager:
             captcha = request.form.get('g-recaptcha-response', None)
             if not self.third_party.verify_captcha(captcha):
                 return failure_response or jsonify({'error': 'Captcha required'}), 400
+            return f(*args, **kwargs)
+        return decorated_function
+
+    def csrf_token_required(self, f, failure_response=None):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            csrf_token = request.form.get('csrf_token', None)
+            if not self.third_party.verify_csrf_token(csrf_token):
+                return failure_response or jsonify({'error': 'Invalid CSRF token'}), 400
             return f(*args, **kwargs)
         return decorated_function
 

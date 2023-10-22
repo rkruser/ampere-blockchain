@@ -12,9 +12,6 @@ class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
         self.users = self.db['users']
         self.sessions = self.db['sessions']
 
-    def _generate_random_string(self, length=32):
-        return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
-
     def login_user(self, username, password):
         user = self.users.find_one({"username": username, "password": password})  # Consider hashing the password for better security
         if not user:

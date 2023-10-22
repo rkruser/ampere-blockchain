@@ -63,3 +63,6 @@ class ThirdPartyAuthentication:
     
     def verify_sms_mfa(self, phone_number, code):
         return self.sms_mfa_client.verify(phone_number, code)
+    
+    def verify_csrf_token(self, csrf_token):
+        return True
