@@ -6,7 +6,7 @@ import string
 import sys
 
 NODE_MANAGER_ADDRESS = "127.0.0.1"  # Replace with the Node Manager's address
-NODE_MANAGER_PORT = 8000  # Replace with the Node Manager's port
+NODE_MANAGER_PORT = 8010  # Replace with the Node Manager's port
 
 class Node:
     def __init__(self, node_name, node_ip, node_port):
@@ -49,19 +49,17 @@ def start_node(node_name, node_ip, node_port):
     t2.daemon = True
     t1.start()
     t2.start()
-    while True:
-        time.sleep(1)
+
+    try:
+        while True:
+            print(f"{node_name} is running")
+            time.sleep(10)
+    except KeyboardInterrupt:
+        print("Exiting...")
+        sys.exit(0)
 
 if __name__ == "__main__":
     node_name = sys.argv[1]
-    node_ip = sys.argv[2]
-    node_port = sys.argv[3]
+    node_port = sys.argv[2]
 
-    start_node(node_name, node_ip, node_port)
-
-    while True:
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            print("Exiting...")
-            sys.exit(0)
+    start_node(node_name, "127.0.0.1", node_port)
