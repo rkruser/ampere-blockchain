@@ -68,7 +68,7 @@ def make_app(subprocesses, address_table):
         #process = subprocess.Popen(['python', NODE_PROGRAM_PATH, node_name, node_ip, node_port])
         process = multiprocessing.Process(target=start_node, args=(node_name, node_ip, node_port))
         process.start()
-        
+
         subprocesses[node_name] = process
         address_table[node_name] = (node_ip, node_port, True)
         
