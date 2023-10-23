@@ -3,6 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Add this to your <head> section if you haven't already included jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            function updateNodeTable() {
+                $.ajax({
+                    url: "/get_active_nodes",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(data) {
+                        // Clear current table rows
+                        $("#nodeTable tbody").empty();
+    
+                        // Iterate over the JSON data and add rows to the table
+                        for (let name in data) {
+                            let attributes = data[name];
+                            let row = `<tr>
+                                <td>${name}</td>
+                                <td>${attributes[0]}</td>
+                                <td>${attributes[1]}</td>
+                                <td>${attributes[2]}</td>
+                            </tr>`;
+                            $("#nodeTable tbody").append(row);
+                        }
+                    },
+                    error: function(error) {
+                        console.log("Error fetching active nodes:", error);
+                    }
+                });
+            }
+    
+            // Call the function immediately to populate the table
+            updateNodeTable();
+    
+            // Set up a 10-second interval to keep updating the table
+            setInterval(updateNodeTable, 2000);
+                // Handle the makeNodeForm submission
+
+            $("#makeNodeForm").submit(function(event) {
+                event.preventDefault();  // Prevent default form submission
+
+                $.ajax({
+                    url: "/make_node",
+                    type: "POST",
+                    dataType: "json",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        node_name: $("#nodeName").val(),
+                        node_port: $("#nodePort").val()
+                    }),
+                    success: function(data) {
+                        $("#makeNodeResult").text(JSON.stringify(data));
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        $("#makeNodeResult").text(`Error: ${textStatus} - ${errorThrown}`);
+                    }
+                });
+            });
+
+            // Handle the deleteNodeForm submission
+            $("#deleteNodeForm").submit(function(event) {
+                event.preventDefault();  // Prevent default form submission
+
+                $.ajax({
+                    url: "/delete_node",
+                    type: "POST",
+                    dataType: "json",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        node_name: $("#deleteNodeName").val()
+                    }),
+                    success: function(data) {
+                        $("#deleteNodeResult").text(JSON.stringify(data));
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        $("#deleteNodeResult").text(`Error: ${textStatus} - ${errorThrown}`);
+                    }
+                });
+            });
+        });
+    </script>
+    
     <title>Homepage</title>
     <style>
         body {
@@ -42,6 +124,22 @@
             border-radius: 5px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
+
+        #nodeTable {
+            table-layout: auto;
+            width: auto;  /* ensures the table takes only as much width as needed */
+        }
+
+        #nodeTable td, #nodeTable th {
+            white-space: nowrap;
+            padding: 5px 10px; /* optional, for better spacing */
+        }
+
+        #makeNodeForm input[type="text"] {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -56,13 +154,45 @@
     </nav>
 
     <div class="content">
-        <h2>Welcome to the homepage</h2>
-        <p>
-            This is a basic template for a homepage. You can customize this template by adding more content, images, and styles as needed.
-        </p>
-        <p>
-            Explore the other pages to learn more about what we offer.
-        </p>
+        <div id="nodeTableDiv">
+            <h3>Active Nodes</h3>
+            <table id="nodeTable" border="1">
+                <thead>
+                    <tr>
+                        <th>Node Name</th>
+                        <th>IP Address</th>
+                        <th>Port</th>
+                        <th>Is Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added here dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Make Node Form -->
+        <div id="makeNodeDiv">
+            <h3>Create Node</h3>
+            <form id="makeNodeForm">
+                <input type="text" id="nodeName" name="name" placeholder="Name">
+                <input type="text" id="nodePort" name="port" placeholder="Port">
+                <input type="submit" value="Create Node">
+            </form>
+            <div id="makeNodeResult"></div>
+        </div>
+
+        <!-- Delete Node Form -->
+        <div id="deleteNodeDiv">
+            <h3>Delete Node</h3>
+            <form id="deleteNodeForm">
+                <input type="text" id="deleteNodeName" name="name" placeholder="Name">
+                <input type="submit" value="Delete Node">
+            </form>
+            <div id="deleteNodeResult"></div>
+        </div>
+
+
     </div>
 
 </body>

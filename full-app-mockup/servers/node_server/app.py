@@ -20,7 +20,7 @@ def make_app(subprocesses, address_table):
         process = multiprocessing.Process(target=start_node, args=(node_name, node_ip, node_port))
         process.start()
 
-        subprocesses[node_name] = process.pid
+        subprocesses[node_name] = process
         address_table[node_name] = (node_ip, node_port, True)
         
         return jsonify({"message": f"Node {node_name} created!"}), 200
@@ -35,15 +35,19 @@ def make_app(subprocesses, address_table):
         if not process:
             return jsonify({"error": f"No such node: {node_name}"}), 404
 
-        process.terminate()
-        del subprocesses[node_name]
-        del address_table[node_name]
+        try:
+            process.terminate()
+            del subprocesses[node_name]
+            del address_table[node_name]
+        except Exception as e:
+            return jsonify({"error": f"Error terminating node {node_name}: {e}"}), 500
         
         return jsonify({"message": f"Node {node_name} terminated!"}), 200
 
     @app.route('/list_nodes', methods=['GET'])
     def list_nodes():
         active_statuses = {node_name: address for node_name, address in address_table.items()}
+        #active_statuses = {'abc': (1,2,3), 'cde': (4,5,6), 'efg': (7,8,9)}
         return jsonify(active_statuses)
     
     @app.route('/post_address_table', methods=['POST'])

@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
-
+import requests
+import json
+import time
 from core.database import CreateDatabaseInterface
 from core.server import AuthenticationManager
 
@@ -38,6 +40,41 @@ def logout():
 def home():
     return render_template('home.html', username=session.get('username', None))
 
+@app.route('/get_active_nodes', methods=['GET'])
+@auth.login_session_required
+def get_active_nodes():
+    result = requests.get('http://127.0.0.1:5000/list_nodes')
+    return jsonify(result.json())
+
+@app.route('/make_node', methods=['POST'])
+@auth.login_session_required
+def make_node():
+    node_name = request.json.get('node_name')
+    node_ip = '127.0.0.1'
+    node_port = int(request.json.get('node_port')) + 9000
+    
+    if not node_name or not node_ip or not node_port:
+        return jsonify({"error": "Insufficient node info!"}), 400
+    data = {
+        'node_name': node_name,
+        'node_ip': node_ip,
+        'node_port': node_port
+    }
+    result = requests.post('http://127.0.0.1:5000/make_node', json=data)
+    return jsonify(result.json()), result.status_code
+
+@app.route('/delete_node', methods=['POST'])
+@auth.login_session_required
+def delete_node():
+    node_name = request.json.get('node_name')
+    if not node_name:
+        return jsonify({"error": "Node name is required!"}), 400
+    data = {
+        'node_name': node_name,
+    }
+
+    result = requests.post('http://127.0.0.1:5000/delete_node', json=data)
+    return jsonify(result.json()), result.status_code
 
 if __name__ == '__main__':
     app.run(port=5002, debug=True)
