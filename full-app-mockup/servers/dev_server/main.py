@@ -4,6 +4,7 @@ import json
 import time
 from core.database import CreateDatabaseInterface
 from core.server import AuthenticationManager
+import ssl
 
 db = CreateDatabaseInterface('mongodb', {'host': '127.0.0.1', 'port': 27017, 'database_name': 'test'})
 db.add_user('ryen', 'T5TCoAXS3Ng0Fr3')
@@ -77,4 +78,9 @@ def delete_node():
     return jsonify(result.json()), result.status_code
 
 if __name__ == '__main__':
-    app.run(port=5002, debug=True)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2) #Change to v1_3 when available
+    context.load_cert_chain(certfile='C:/Certbot/live/ryenandvivekstartup.online/fullchain.pem', 
+                            keyfile='C:/Certbot/live/ryenandvivekstartup.online/privkey.pem')
+    #context.verify_mode = ssl.CERT_OPTIONAL
+
+    app.run(ssl_context=context, host='0.0.0.0', debug=False, port=3000)
