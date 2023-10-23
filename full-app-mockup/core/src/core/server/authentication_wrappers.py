@@ -44,6 +44,12 @@ class AuthenticationManager:
             session['username'] = username
             session['session_id'] = session_id
         return success
+    
+    def logout_user(self, username, session_id):
+        self.database.logout_user(username, session_id)
+        session['authenticated'] = False
+        session['username'] = None
+        session['session_id'] = None
 
     def login_session_required(self, f, failure_response=None, use_redirect=True, redirect_to='login'):
         @wraps(f)

@@ -15,36 +15,34 @@ class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
     def login_user(self, username, password):
         user = self.users.find_one({"username": username, "password": password})  # Consider hashing the password for better security
         if not user:
-            return False  # or raise an appropriate error
+            return False, None  # or raise an appropriate error
 
         session_id = generate_session_key()
         expiration_time = datetime.datetime.now() + datetime.timedelta(hours=24)
         
         with self.client.start_session() as session:
-            with session.start_transaction():
-                self.sessions.insert_one({
-                    "session_id": session_id,
-                    "username": username,
-                    "expiration_time": expiration_time
-                }, session=session)
+            self.sessions.insert_one({
+                "session_id": session_id,
+                "username": username,
+                "expiration_time": expiration_time
+            }, session=session)
 
-                self.users.update_one(
-                    {"username": username},
-                    {"$push": {"active_sessions": session_id}},
-                    session=session
-                )
+            self.users.update_one(
+                {"username": username},
+                {"$push": {"active_sessions": session_id}},
+                session=session
+            )
 
         return True, session_id
 
     def logout_user(self, username, session_id):
         with self.client.start_session() as session:
-            with session.start_transaction():
-                self.sessions.delete_one({"session_id": session_id}, session=session)
-                self.users.update_one(
-                    {"username": username},
-                    {"$pull": {"active_sessions": session_id}},
-                    session=session
-                )
+            self.sessions.delete_one({"session_id": session_id}, session=session)
+            self.users.update_one(
+                {"username": username},
+                {"$pull": {"active_sessions": session_id}},
+                session=session
+            )
 
     def verify_user_session(self, session_username, session_id):
         session = self.sessions.find_one({"session_id": session_id, "username": session_username})
@@ -52,8 +50,13 @@ class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
             return False
         return datetime.datetime.now() < session['expiration_time']
 
-    def add_user(self, username, password, email, phone_number, permission_level):
+    def add_user(self, username, password, email='', phone_number='', permission_level=''):
         # Consider hashing the password for better security
+        user = self.users.find_one({"username": username})  # Consider hashing the password for better security
+        if user:
+            # Remove user so that we can put a new one in
+            self.users.delete_one({"username": username})
+            
         self.users.insert_one({
             "username": username,
             "password": password,
@@ -62,6 +65,7 @@ class UserMongoDatabase(UserDatabaseInterface, MongoDatabase):
             "permission_level": permission_level,
             "active_sessions": []
         })
+        return "User added"
 
     def has_admin_permissions(self, username):
         user = self.users.find_one({"username": username})
