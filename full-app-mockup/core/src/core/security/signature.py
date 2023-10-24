@@ -14,3 +14,17 @@ class Signature:
 
     def string_serialize(self):
         pass
+
+
+"""
+Images/scans of patient signed documents authorizing app use?
+"""
+class Proof:
+    pass
+
+
+class AuthenticatedEncryption:
+    def __init__(self):
+        self.mac = None
+        self.message = None
+        self.size = None
