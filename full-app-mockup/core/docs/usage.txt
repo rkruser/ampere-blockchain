@@ -1,0 +1,24 @@
+Usage of blockchain software for patient data: sketching things out.
+
+
+blockchain = Blockchain()
+blockchain.load('patient_id.bchn')
+
+new_data = fhir.GetUpdatedPatientInfo('patient_id')
+new_block = IntakeBlock(new_data)
+blockchain.add_block(new_block)
+
+
+# The patient's blockchain file identifies the proposing node and the admin node for that patient? Nah, not necessary.
+# The other global chain identifies the current admin nodes and proposer nodes, and I guess the network can decide how to route things (but in practice, at first, there will be one overall admin node)
+
+network = BlockchainNetworkInterface('config_info')
+blockchain.commit(network) #Is this how is should be done? or "network.commit(blockchain)?" Or neither?
+
+ai_query = blockchain.latest_ai_query()
+ai_block = ai.query_ai(network)
+blockchain.add_block(ai_block)
+blockchain.update_central_chain()
+
+
+# Make use of callbacks/threadpool for updating patients?
