@@ -8,10 +8,10 @@ Code for signed messages
 
 
 class Message:
-    def read_from_serial(self):
+    def read_from_bytes(self):
         pass
 
-    def serialize(self):
+    def byte_serialize(self):
         pass
 
     def verify_message(self):
@@ -20,6 +20,7 @@ class Message:
 
 class OuterMessage(Message):
     def __init__(self):
+        self.message = None
         self.message_hash = None
         self.sender_signature = None
 
