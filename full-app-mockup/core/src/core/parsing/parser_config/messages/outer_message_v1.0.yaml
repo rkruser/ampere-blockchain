@@ -1,7 +1,7 @@
 type: OUTER_MESSAGE
 version: "1.0"
 fields:
-  version:
+  version: #Not TYPESPEC here since this is widest app version of messaging protocol
     type: "uint"
     bytes: 1
   subversion:
