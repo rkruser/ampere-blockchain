@@ -1,22 +1,13 @@
 type: OUTER_MESSAGE
 version: "1.0"
 fields:
-  version: #Not TYPESPEC here since this is widest app version of messaging protocol
-    type: "uint"
-    bytes: 1
-  subversion:
-    type: "uint"
-    bytes: 1
-  message_length:
-    type: "uint"
-    bytes: 4
-  message:
-    type: INNER_MESSAGE
-    version: "any"
-  signature_length:
-    type: "uint"
-    length: 2
-  signature:
-    type: "bytes"
-  signer_identity:
-    type: "variable_string_256"
+- name: version
+  type: "versionspec"
+- name: message
+  type: "variable_bytes_32"
+  inner_type: INNER_MESSAGE
+  inner_version: "any"
+- name: signature
+  type: "variable_bytes_16"
+- name: signer_identity
+  type: "variable_string_8"

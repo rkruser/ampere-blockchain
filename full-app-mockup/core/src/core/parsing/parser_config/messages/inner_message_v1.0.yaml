@@ -1,9 +1,12 @@
 type: INNER_MESSAGE
 version: "1.0"
 fields:
-  message_protocol:
-    type: TYPESPEC
-    version: "any" #specifies allowed version of thing in typespec field
-  remainder:
-    type: "CONTEXTUAL"
-    reference_field: "message_protocol"
+- name: message_protocol
+  type: typespec
+- name: message_headers
+  type: CONTEXTUAL
+  reference_field: "message_protocol"
+  version: "any" # Should this go here?
+- name: message_data
+  type: MESSAGE_DATA
+  version: "any"

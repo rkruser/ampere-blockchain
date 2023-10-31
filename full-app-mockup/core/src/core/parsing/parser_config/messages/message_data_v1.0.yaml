@@ -1,8 +1,8 @@
 type: MESSAGE_DATA
 version: "1.0"
 fields:
-  data_format:
-    type: TYPESPEC
-  data:
-    type: "CONTEXTUAL"
-    reference_field: "data_format"
+- name: data_format
+  type: typespec
+- name: data
+  type: CONTEXTUAL
+  reference_field: "data_format"

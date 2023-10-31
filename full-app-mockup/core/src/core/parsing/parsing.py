@@ -63,4 +63,16 @@ Question:
 - Should we just put the version info in the type strings themselves? For easy hashing?
 
 
+
+
+
+Hardcoded types:
+
+variable_bytes_[bits of length field] (e.g., variable_bytes_16)
+variable_string_[bits of length field] (e.g., variable_string_16)
+typespec
+int_[bits] (e.g., int_32)
+uint_[bits] (e.g., uint_32)
+float_[bits] (e.g., float_32)
+
 """
