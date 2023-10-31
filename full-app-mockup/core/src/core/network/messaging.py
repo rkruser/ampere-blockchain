@@ -21,7 +21,6 @@ class Message:
 class OuterMessage(Message):
     def __init__(self):
         self.message = None
-        self.message_hash = None
         self.sender_signature = None
 
 class InnerMessage(Message):

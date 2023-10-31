@@ -1,0 +1,9 @@
+type: INNER_MESSAGE
+version: "1.0"
+fields:
+  message_protocol:
+    type: TYPESPEC
+    version: "any" #specifies allowed version of thing in typespec field
+  remainder:
+    type: "CONTEXTUAL"
+    reference_field: "message_protocol"

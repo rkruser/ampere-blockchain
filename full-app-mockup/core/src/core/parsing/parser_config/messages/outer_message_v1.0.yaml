@@ -1,0 +1,22 @@
+type: OUTER_MESSAGE
+version: "1.0"
+fields:
+  version:
+    type: "uint"
+    bytes: 1
+  subversion:
+    type: "uint"
+    bytes: 1
+  message_length:
+    type: "uint"
+    bytes: 4
+  message:
+    type: INNER_MESSAGE
+    version: "any"
+  signature_length:
+    type: "uint"
+    length: 2
+  signature:
+    type: "bytes"
+  signer_identity:
+    type: "variable_string_256"

@@ -1,0 +1,22 @@
+type: ADVANCED_PROTOCOL
+version: "1.0"
+fields:
+  message_timestamp: #Seconds since reference time
+    type: "uint"
+    bytes: 8
+  message_protocol_state:
+    type: "uint"
+    bytes: 1
+  message_protocol_round_number:
+    type: "uint"
+    bytes: 2
+  message_protocol_nonce:
+    type: "uint"
+    bytes: 8
+  sender_name:
+    type: "variable_string_256"
+  recipient_name:
+    type: "variable_string_256"
+  message_content:
+    type: MESSAGE_DATA
+    version: "any"

@@ -1,0 +1,13 @@
+type: BASIC_PROTOCOL #stateless, directly send the data
+version: "1.0"
+fields:
+  message_timestamp: #Seconds since reference time
+    type: "uint"
+    bytes: 8
+  sender_name:
+    type: "variable_string_256"
+  recipient_name:
+    type: "variable_string_256"
+  message_content:
+    type: MESSAGE_DATA
+    version: "any"
