@@ -76,3 +76,38 @@ uint_[bits] (e.g., uint_32)
 float_[bits] (e.g., float_32)
 
 """
+
+import os
+import yaml
+
+CONFIG_DIRECTORY = './parser_config'
+
+# TODO: store all config types here
+class TypeRegistry:
+    pass
+
+def read_configs(config_directory):
+    # should walk through the config directory and read in all yaml files
+    # use the os.path.walk feature
+    # Call make_parser for each
+    all_configs = {}
+    for root, dirs, files in os.walk(config_directory):
+        for file in files:
+            filename, file_extension = os.path.splitext(file)
+            if file_extension == '.yaml':
+                with open(os.path.join(root, file), 'r') as f:
+                    try:
+                        cfg = yaml.safe_load(f)
+                        all_configs[filename] = cfg
+                    except yaml.YAMLError as e:
+                        print(e)
+    return all_configs
+
+def make_parser(config_file_contents):
+    # should parse the contents as yaml, then create object/function that can parse the type
+    # Store type, version, struct format strings, etc. in object
+    pass
+
+if __name__ == '__main__':
+    all_configs = read_configs(CONFIG_DIRECTORY)
+    print(all_configs)
