@@ -2,13 +2,13 @@ type: ADVANCED_PROTOCOL
 version: "1.0"
 fields:
   - name: message_timestamp #Seconds since reference time
-    type: "uint64"
+    type: "uint_64"
   - name: message_protocol_state
-    type: "uint8"
+    type: "uint_8"
   - name: message_protocol_round_number
-    type: "uint16"
+    type: "uint_16"
   - name: message_protocol_nonce
-    type: "uint64"
+    type: "uint_64"
   - name: sender_name
     type: "variable_string_8"
   - name: recipient_name
