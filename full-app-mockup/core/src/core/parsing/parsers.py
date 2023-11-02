@@ -421,6 +421,7 @@ TODO:
  - Make it so that get_type() returns the latest version of a type if no version is specified
  - Handle version end strings in the compound type parser somehow
  - Test everything with functions that create basic messages
+ - *Test that read and write are perfect inverses, and test that hashing is consistent
 
 Note: entry point for parsing a new message is either the dynamic parser or the latest OUTER_MESSAGE parser or something
 '''
