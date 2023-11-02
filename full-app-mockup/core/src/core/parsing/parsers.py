@@ -416,6 +416,11 @@ class CompoundType(TypeParser):
         return True
 
 
-# Later, implement some means of condensing all the parse logic to direct references to other types
-# i.e., after initial config intake, go from a bunch of strings to a bunch of references to TypeParser objects
-# method of TypeRegistry I suppose
+'''
+TODO:
+ - Make it so that get_type() returns the latest version of a type if no version is specified
+ - Handle version end strings in the compound type parser somehow
+ - Test everything with functions that create basic messages
+
+Note: entry point for parsing a new message is either the dynamic parser or the latest OUTER_MESSAGE parser or something
+'''
