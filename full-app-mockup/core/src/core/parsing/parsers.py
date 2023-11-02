@@ -28,7 +28,9 @@ LengthBitNumberToStructFormat = {
 }
 
 def isBuiltinType(type_name):
-    if type_name in FixedBuiltinNumericalTypeNames:
+    if type_name == 'dynamic':
+        return True
+    elif type_name in FixedBuiltinNumericalTypeNames:
         return True
     split_name = type_name.split('_')
     if len(split_name) == 3:
@@ -50,6 +52,7 @@ def isVariableLength(type_name):
 class TypeRegistry:
     def __init__(self):
         self.types = {}
+        # Should initialize with all builtin types
 
     def register_type(self, type_parser):
         self.types[type_parser.type_name()] = type_parser
@@ -63,7 +66,11 @@ class TypeRegistry:
                 return self.register_type(VariableLengthBuiltinType(type_name))
             else:
                 return self.register_type(FixedLengthBuiltinType(type_name))
-        return self.types[type_name]
+        return None
+    
+    def resolve_parsers(self):
+        for type_parser in self.types.values():
+            type_parser.resolve_parsers()
 
 Types = TypeRegistry()
 
@@ -73,6 +80,18 @@ class TypeParser:
         self.name = name
         self.builtin = is_builtin
 
+        split_name = self.name.split('.')
+        if len(split_name) == 4:
+            if split_name[1] != 'v':
+                raise ValueError(f'Invalid type name {self.name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
+            self.rootname = split_name[0]
+            self.version = tuple(int(split_name[2]), int(split_name[3]))
+        elif len(split_name) == 1:
+            self.rootname = name
+            self.version = None
+        else:
+            raise ValueError(f'Invalid type name {self.name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
+
     '''
     Return true if type is builtin (e.g., lowercase by convention). Return false if compound type.
     '''
@@ -81,6 +100,9 @@ class TypeParser:
     
     def type_name(self):
         return self.name
+
+    def resolve_parsers(self):
+        pass
 
     def byte_length(self, bytestream=None):
         raise NotImplementedError
@@ -104,6 +126,61 @@ class TypeParser:
         raise NotImplementedError
 
 
+class DynamicType(TypeParser):
+    # Can only be used to parse compound types that prepend their type name to the bytestream
+    def __init__(self, type_registry=Types):
+        super().__init__('dynamic', True)
+        self.type_name_parser = TypeReference('variable_string_8', type_registry=type_registry)
+        self.type_registry = type_registry
+
+    def resolve_parsers(self):
+        self.type_name_parser = self.type_name_parser.get_type_parser()
+
+    def get_dynamic_parser(self, bytestream):
+        success_flag, cast_type_name, _ = self.type_name_parser.parse_bytes(bytestream)
+        if not success_flag:
+            return (False, None, None)
+        dynamic_parser = self.type_registry.get_type(cast_type_name)
+        if dynamic_parser is None:
+            return (False, None, None)
+        return (True, cast_type_name, dynamic_parser)
+
+    def byte_length(self, bytestream=None):
+        if bytestream is None:
+            warnings.warn('byte_length method of dynamic type called without bytestream; returning byte number of type_name length field only')
+            return 1
+        success_flag, cast_type_name, dynamic_parser = self.get_dynamic_parser(bytestream)
+        if not success_flag:
+            raise ValueError(f'Could not load dynamic type parser for type name {cast_type_name}')
+        return dynamic_parser.byte_length(bytestream=bytestream)
+
+    def parse_bytes(self, bytestream):
+        success_flag, _, dynamic_parser = self.get_dynamic_parser(bytestream)
+        if not success_flag:
+            return (False, None, bytestream)
+        success_flag, parsed_value, remainder = dynamic_parser.parse_bytes(bytestream) #Use full bytestream here because the cast type will re-read its own type name
+        if not success_flag:
+            return (False, None, bytestream)
+        return (True, parsed_value, remainder)
+
+    def write_bytes(self, value_dict):
+        dynamic_parser = self.type_registry.get_type(value_dict['_type'])
+        if dynamic_parser is None:
+            raise ValueError(f'Could not load dynamic type parser for type name {value_dict["_type"]}')
+        return dynamic_parser.write_bytes(value_dict)
+
+    def validate_type(self, value_dict):
+        if not isinstance(value_dict, dict):
+            return False
+        if '_type' not in value_dict:
+            return False
+        dynamic_parser = self.type_registry.get_type(value_dict['_type'])
+        if dynamic_parser is None:
+            return False
+        return dynamic_parser.validate_type(value_dict)
+
+
+
 def bytes_to_ascii(bytestream):
     return bytestream.decode('ascii')
 
@@ -121,13 +198,9 @@ class FixedLengthBuiltinType(TypeParser):
         self.is_string = False
         if name in FixedBuiltinNumericalTypeNames:
             self.is_number = True
-            struct_format, num_bytes, is_integer, is_signed, min_val, max_val = FixedBuiltinNumericalTypeNames[name]
-            self.struct_format = struct_format
-            self.num_bytes = num_bytes
-            self.is_integer = is_integer
-            self.is_signed = is_signed
-            self.min_val = min_val
-            self.max_val = max_val
+            self.struct_format, self.num_bytes, 
+            self.is_integer, self.is_signed, 
+            self.min_val, self.max_val = FixedBuiltinNumericalTypeNames[name]
         else:
             self.is_number = False
             self.is_integer = False
@@ -205,7 +278,7 @@ class VariableLengthBuiltinType(TypeParser):
         return (True, self.encode_func(bytestream[self.length_info_bytenum:endpoint]), bytestream[endpoint:])
     
     def write_bytes(self, value):
-        length = len(value)
+        length = len(value) #struct.pack does the bounds checking
         return struct.pack(self.struct_format, length) + self.decode_func(value)
     
     def validate_type(self, value):
@@ -216,11 +289,131 @@ class VariableLengthBuiltinType(TypeParser):
         return True
 
 
-class CompoundType(TypeParser):
-    def __init__(self, name, fields):
+class TypeReference(TypeParser):
+    def __init__(self, name, type_registry=Types):
         super().__init__(name, False)
-        # Then stuff with fields
+        self.type_registry = type_registry
 
+    def get_type_parser(self):
+        type_parser = self.type_registry.get_type(self.name)
+        if type_parser is None:
+            raise ValueError(f'Type {self.name} not found in type registry')
+        return type_parser
+
+    def byte_length(self, bytestream=None):
+        type_parser = self.get_type_parser()
+        return type_parser.byte_length(bytestream=bytestream)
+
+    def parse_bytes(self, bytestream):
+        type_parser = self.get_type_parser()
+        return type_parser.parse_bytes(bytestream)
+
+    def write_bytes(self, value):
+        type_parser = self.get_type_parser()
+        return type_parser.write_bytes(value)
+
+    def validate_type(self, value):
+        type_parser = self.get_type_parser()
+        return type_parser.validate_type(value)
+
+
+class CompoundType(TypeParser):
+    def __init__(self, name, fields, prepend_type_name=False, type_registry=Types, defer_inner_casts=False):
+        super().__init__(name, False)
+        self.type_registry = type_registry
+        self.defer_inner_casts = defer_inner_casts
+        self.fields = fields
+        self.prepend_type_name = prepend_type_name
+
+        if self.prepend_type_name:
+            self.field_names = ['_type']
+            self.type_names = ['variable_string_8']
+        else:
+            self.field_names = []
+            self.type_names = []
+
+        self.field_names += [field['name'] for field in self.fields]
+        self.type_names += [field['type'] for field in self.fields]
+        
+        self.parsers = [TypeReference(type_name, type_registry=self.type_registry) for type_name in self.type_names]
+
+        self.inner_parsers = {}
+        self.inner_versions = {}
+        for field in self.fields:
+            if 'inner_type' in field:
+                self.inner_parsers[field['name']] = TypeReference(field['inner_type'],
+                                                                   type_registry=self.type_registry)
+                if 'inner_version' in field:
+                    self.inner_versions[field['name']] = field['inner_version']
+                else:
+                    self.inner_versions[field['name']] = 'any'
+
+    '''
+    This is separated out because during __init__, not all types may be registered yet.
+    Resolving parsers is optional but may improve performance and catch errors earlier.
+    '''
+    def resolve_parsers(self):
+        new_parsers = [parser_reference.get_type_parser() for parser_reference in self.parsers]
+        self.parsers = new_parsers
+
+        new_inner_parsers = { inner_field: inner_parser_reference.get_type_parser() for inner_field, inner_parser_reference in self.inner_parsers }
+        self.inner_parsers = new_inner_parsers
+
+    def byte_length(self, bytestream=None):
+        return sum([parser.byte_length(bytestream=bytestream) for parser in self.parsers])
+
+    def perform_inner_casts(self, parsed_dict):
+        for field_name, inner_parser in self.inner_parsers:
+            if field_name in parsed_dict:
+                parsed_dict[field_name] = inner_parser.parse_bytes(parsed_dict[field_name])
+            else:
+                raise ValueError(f'Field {field_name} not found in dictionary')
+        return parsed_dict
+
+    def parse_bytes(self, bytestream):
+        parsed_dict = {}
+        for field_name, parser in zip(self.field_names, self.parsers):
+            success_flag, parsed_value, bytestream = parser.parse_bytes(bytestream)
+            if not success_flag:
+                return (False, None, bytestream)
+            parsed_dict[field_name] = parsed_value
+        if not self.defer_inner_casts:
+            parsed_dict = self.perform_inner_casts(parsed_dict)
+        if self.prepend_type_name:
+            if parsed_dict['_type'] != self.name:
+                raise TypeError(f'Expected type {self.name} but got type {parsed_dict["_type"]}')
+        return (True, parsed_dict, bytestream)
+
+    def write_bytes(self, value_dict):
+        bytestream = b''
+        if self.prepend_type_name:
+            value_dict['_type'] = self.name #overwrite pre-existing type name if it exists
+        for field_name, parser in zip(self.field_names, self.parsers):
+            field_value = value_dict[field_name]
+            if (field_name in self.inner_parsers) and (isinstance(field_value, dict)):
+                field_value = self.inner_parsers[field_name].write_bytes(field_value)
+            bytestream += parser.write_bytes(field_value)
+        return bytestream
+
+    def validate_type(self, value_dict, verify_inner_types=True):
+        if not isinstance(value_dict, dict):
+            return False
+        field_names = self.field_names
+        if self.prepend_type_name:
+            field_names = field_names[1:]
+        if not set(field_names).issubset(value_dict.keys()):
+            return False
+        for field_name, parser in zip(field_names, self.parsers):
+            field_value = value_dict[field_name]
+            if isinstance(field_value, dict) or (verify_inner_types and (field_name in self.inner_parsers)):
+                if field_name in self.inner_parsers:
+                    if not self.inner_parsers[field_name].validate_type(field_value):
+                        return False
+                else:
+                    return False
+            elif not parser.validate_type(value_dict[field_name]):
+                return False
+        return True
 
 
 # Later, implement some means of condensing all the parse logic to direct references to other types
