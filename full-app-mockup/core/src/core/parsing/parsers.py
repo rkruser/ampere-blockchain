@@ -50,12 +50,19 @@ def isBuiltinType(type_name):
     split_name = type_name.split('_')
     if len(split_name) == 3:
         prefix, rootname, length_info_bitnum = split_name
-        if (prefix != 'variable') or (rootname not in ['string', 'bytes']) or (int(length_info_bitnum) not in INFO.LengthBitsFormat):
+        try:
+            length_info_bitnum = int(length_info_bitnum)
+        except ValueError:
+            return False
+        if (prefix != 'variable') or (rootname not in ['string', 'bytes']) or (length_info_bitnum not in INFO.LengthBitsFormat):
             return False
         return True
     if len(split_name) == 2:
         rootname, bytenum = split_name
-        bytenum = int(bytenum)
+        try:
+            bytenum = int(bytenum)
+        except ValueError:
+            return False
         if (rootname not in ['string', 'bytes']):
             return False
         return True
@@ -469,6 +476,33 @@ Note: entry point for parsing a new message is either the dynamic parser or the 
 '''
 
 
+
+def test_1():
+    for typename in INFO.FixedBuiltinTypeInfo:
+        print(typename, isBuiltinType(typename))
+    names = [
+        'dynamic',
+        'string_4',
+        'bytes_9',
+        'string_120',
+        'bytes_24',
+        'variable_bytes_8',
+        'variable_bytes_16',
+        'variable_bytes_32',
+        'variable_bytes_64',
+        'variable_bytes_20',
+        'variable_string_8',
+        'variable_string_16',
+        'variable_string_32',
+        'variable_string_64',
+        'variable_string_10',
+        'asdf',
+        'MOOP_19.v.1.0'
+    ]
+    for name in names:
+        print(name, isBuiltinType(name))
+
+
 if __name__ == '__main__':
     # Test code
-    pass
+    test_1()
