@@ -252,9 +252,7 @@ class FixedLengthBuiltinType(TypeParser):
         self.is_string = False
         if name in INFO.FixedBuiltinTypeInfo:
             self.is_number = True
-            self.struct_format, self.num_bytes, 
-            self.is_integer, self.is_signed, 
-            self.min_val, self.max_val = INFO.FixedBuiltinTypeInfo[name].get_tuple()
+            self.struct_format, self.num_bytes, self.is_integer, self.is_signed, self.min_val, self.max_val = INFO.FixedBuiltinTypeInfo[name].get_tuple()
         else:
             self.is_number = False
             self.is_integer = False
@@ -502,7 +500,58 @@ def test_1():
     for name in names:
         print(name, isBuiltinType(name))
 
+def test_2():
+    print("Uint 8")
+    uint8 = INFO.Types.get_type('uint_8')
+    bytes_out = uint8.write_bytes(32)
+    bytes_in = uint8.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print("Uint 16")
+    uint64 = INFO.Types.get_type('uint_64')
+    bytes_out = uint64.write_bytes(1234567)
+    bytes_in = uint64.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print("Uint 32")
+    uint32 = INFO.Types.get_type('uint_32')
+    bytes_out = uint32.write_bytes(1234567)
+    bytes_in = uint32.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+    print("Testing too short")
+    print(uint32.parse_bytes(b'aaa')) #Should be too short
+
+    print("Int 32")
+    int32 = INFO.Types.get_type('int_32')
+    bytes_out = int32.write_bytes(-1234567)
+    bytes_in = int32.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print("String 8")
+    string_8 = INFO.Types.get_type('string_8')
+    bytes_out = string_8.write_bytes('hello')
+    bytes_in = string_8.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print("Variable String 8")
+    variable_string_8 = INFO.Types.get_type('variable_string_8')
+    bytes_out = variable_string_8.write_bytes('hello')
+    bytes_in = variable_string_8.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print("Variable bytes 8")
+    variable_bytes_8 = INFO.Types.get_type('variable_bytes_8')
+    bytes_out = variable_bytes_8.write_bytes(b'hello')
+    bytes_in = variable_bytes_8.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+    print('Variable string 32')
+    variable_string_32 = INFO.Types.get_type('variable_string_32')
+    bytes_out = variable_string_32.write_bytes('hello, here is a longer message')
+    bytes_in = variable_string_32.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
 
 if __name__ == '__main__':
     # Test code
-    test_1()
+    #test_1()
+    test_2()
