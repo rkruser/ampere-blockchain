@@ -219,6 +219,8 @@ class DynamicType(TypeParser):
         return (True, parsed_value, remainder)
 
     def write_bytes(self, value_dict):
+        if '_type' not in value_dict:
+            raise ValueError(f'Cannot write dynamic type without type name specified in dictionary under key "_type"')
         dynamic_parser = self.type_registry.get_type(value_dict['_type'])
         if dynamic_parser is None:
             raise ValueError(f'Could not load dynamic type parser for type name {value_dict["_type"]}')
@@ -643,9 +645,44 @@ def test_6():
 
     moop = type_registry.get_type('MOOP_B.v.1.0')
     s = moop.write_bytes({'Bfield1': 1234567, 'Bfield2': {'Afield1': 1234, 'Afield2': 'hello'}})
-    print("Moop2")
+    print("Moop")
     print(s)
     print(moop.parse_bytes(s))
+
+# Test dynamic types
+def test_7():
+    type_registry = INFO.Types
+    type_registry.register_type(CompoundType('MOOP_A.v.1.0', [
+        {'name': 'Afield1', 'type': 'uint_32'},
+        {'name': 'Afield2', 'type': 'variable_string_8'},
+    ], prepend_type_name=True))
+    type_registry.register_type(CompoundType('MOOP_B.v.1.0', [
+        {'name': 'Bfield1', 'type': 'uint_32'},
+        {'name': 'Bfield2', 'type':'variable_bytes_32', 'inner_type': 'dynamic'},
+        ], prepend_type_name=True))
+    type_registry.register_type(CompoundType('MOOP_C.v.1.0', [
+        {'name': 'Cfield1', 'type': 'uint_32'},
+        {'name': 'Cfield2', 'type':'variable_string_32'},
+        ], prepend_type_name=True))
+
+    type_registry.resolve_parsers()
+
+    moop = type_registry.get_type('MOOP_B.v.1.0')
+    s = moop.write_bytes({'Bfield1': 1234567, 'Bfield2': {'_type':'MOOP_A.v.1.0' ,'Afield1': 1234, 'Afield2': 'hello'}})
+    print("Moop dynamic test")
+    print(s)
+    print(moop.parse_bytes(s))
+
+    s2 = moop.write_bytes({'Bfield1': 123456789, 'Bfield2': {'_type':'MOOP_C.v.1.0' ,'Cfield1': 1234, 'Cfield2': 'helloskdfjskfjksjfksjf'}})
+    print(s2)
+    print(moop.parse_bytes(s2+b'random_extra_stuff'))
+
+def all_test_cases():
+    test_cases = [test_1, test_2, test_3, test_4, test_5, test_6, test_7]
+    for test_case in test_cases:
+        print(f'Running test case {test_case.__name__}')
+        test_case()
+        print("================================")
 
 if __name__ == '__main__':
     # Test code
@@ -654,4 +691,6 @@ if __name__ == '__main__':
     #test_3()
     #test_4()
     #test_5()
-    test_6()
+    #test_6()
+    #test_7()
+    all_test_cases()
