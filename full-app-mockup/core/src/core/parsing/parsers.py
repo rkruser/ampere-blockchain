@@ -5,37 +5,40 @@ import warnings
 # convention: types always end with ".X.Y" where X and Y and version and sub-version.
 # Version specs by themselves are "X.Y" strings
 
-ENDIAN_FORMAT_CHAR = '>' #big-endian
+
+# Consider wrapping all created objects in a class
 
 # "name": (struct format code, number of bytes, is_integer, is_signed, min_val, max_val)
-FixedBuiltinNumericalTypeNames = {
-    'uint_8': ('B', 1, True, False, 0, 2**8-1),
-    'uint_16': ('H', 2, True, False, 0, 2**16-1),
-    'uint_32': ('I', 4, True, False, 0, 2**32-1),
-    'uint_64': ('Q', 8, True, False, 0, 2**64-1),
-    'int_8': ('b', 1, True, True, -2**7, 2**7-1),
-    'int_16': ('h', 2, True, True, -2**15, 2**15-1),
-    'int_32': ('i', 4, True, True, -2**31, 2**31-1),
-    'int_64': ('q', 8, True, True, -2**63, 2**63-1),
-    'float_32': ('f', 4, False, True, None, None),
-    'float_64': ('d', 8, False, True, None, None)
-}
-LengthBitNumberToStructFormat = {
-    8: 'B',
-    16: 'H',
-    32: 'I',
-    64: 'Q'
-}
+class INFO:
+    ENDIAN_FORMAT_CHAR = '>' #big-endian
+    FixedBuiltinTypeInfo = {
+        'uint_8': ('B', 1, True, False, 0, 2**8-1),
+        'uint_16': ('H', 2, True, False, 0, 2**16-1),
+        'uint_32': ('I', 4, True, False, 0, 2**32-1),
+        'uint_64': ('Q', 8, True, False, 0, 2**64-1),
+        'int_8': ('b', 1, True, True, -2**7, 2**7-1),
+        'int_16': ('h', 2, True, True, -2**15, 2**15-1),
+        'int_32': ('i', 4, True, True, -2**31, 2**31-1),
+        'int_64': ('q', 8, True, True, -2**63, 2**63-1),
+        'float_32': ('f', 4, False, True, None, None),
+        'float_64': ('d', 8, False, True, None, None)
+    }
+    LengthBitsFormat = {
+        8: 'B',
+        16: 'H',
+        32: 'I',
+        64: 'Q'
+    }
 
 def isBuiltinType(type_name):
     if type_name == 'dynamic':
         return True
-    elif type_name in FixedBuiltinNumericalTypeNames:
+    elif type_name in INFO.FixedBuiltinTypeInfo:
         return True
     split_name = type_name.split('_')
     if len(split_name) == 3:
         prefix, rootname, length_info_bitnum = split_name
-        if (prefix != 'variable') or (rootname not in ['string', 'bytes']) or (int(length_info_bitnum) not in LengthBitNumberToStructFormat):
+        if (prefix != 'variable') or (rootname not in ['string', 'bytes']) or (int(length_info_bitnum) not in INFO.LengthBitsFormat):
             return False
         return True
     if len(split_name) == 2:
@@ -52,17 +55,36 @@ def isVariableLength(type_name):
 class TypeRegistry:
     def __init__(self):
         self.types = {}
+        self.rootname_versions = {}
         # Should initialize with all builtin types
 
     def register_type(self, type_parser):
         self.types[type_parser.type_name()] = type_parser
+        if type_parser.type_rootname() not in self.rootname_versions:
+            self.rootname_versions[type_parser.type_rootname()] = []
+        self.rootname_versions[type_parser.type_rootname()].append(type_parser.type_version())
         return type_parser
     
+    def get_latest_version_name(self, rootname):
+        if rootname not in self.rootname_versions:
+            return None
+        if len(self.rootname_versions[rootname]) == 0:
+            return None
+        return join_typename(rootname, max(self.rootname_versions[rootname]))
+    
+    def get_latest_version(self, rootname):
+        latest_version_name = self.get_latest_version_name(rootname)
+        if latest_version_name is None:
+            return None
+        return self.get_type(latest_version_name)
+
     def get_type(self, type_name):
         if type_name in self.types:
             return self.types[type_name]
         elif isBuiltinType(type_name):
-            if isVariableLength(type_name):
+            if type_name == 'dynamic':
+                return self.register_type(DynamicType())
+            elif isVariableLength(type_name):
                 return self.register_type(VariableLengthBuiltinType(type_name))
             else:
                 return self.register_type(FixedLengthBuiltinType(type_name))
@@ -72,25 +94,31 @@ class TypeRegistry:
         for type_parser in self.types.values():
             type_parser.resolve_parsers()
 
-Types = TypeRegistry()
 
+INFO.Types = TypeRegistry()
+
+
+def join_typename(rootname, version):
+    if version is None:
+        return rootname
+    return f'{rootname}.v.{version[0]}.{version[1]}'
+
+def split_typename(type_name):
+    split_name = type_name.split('.')
+    if len(split_name) == 4:
+        if split_name[1] != 'v':
+            raise ValueError(f'Invalid type name {type_name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
+        return (split_name[0], tuple(int(split_name[2]), int(split_name[3])))
+    elif len(split_name) == 1:
+        return (type_name, None)
+    else:
+        raise ValueError(f'Invalid type name {type_name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
 
 class TypeParser:
     def __init__(self, name, is_builtin):
         self.name = name
         self.builtin = is_builtin
-
-        split_name = self.name.split('.')
-        if len(split_name) == 4:
-            if split_name[1] != 'v':
-                raise ValueError(f'Invalid type name {self.name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
-            self.rootname = split_name[0]
-            self.version = tuple(int(split_name[2]), int(split_name[3]))
-        elif len(split_name) == 1:
-            self.rootname = name
-            self.version = None
-        else:
-            raise ValueError(f'Invalid type name {self.name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
+        self.rootname, self.version = split_typename(self.name)
 
     '''
     Return true if type is builtin (e.g., lowercase by convention). Return false if compound type.
@@ -100,6 +128,12 @@ class TypeParser:
     
     def type_name(self):
         return self.name
+    
+    def type_rootname(self):
+        return self.rootname
+
+    def type_version(self):
+        return self.version
 
     def resolve_parsers(self):
         pass
@@ -128,7 +162,7 @@ class TypeParser:
 
 class DynamicType(TypeParser):
     # Can only be used to parse compound types that prepend their type name to the bytestream
-    def __init__(self, type_registry=Types):
+    def __init__(self, type_registry=INFO.Types):
         super().__init__('dynamic', True)
         self.type_name_parser = TypeReference('variable_string_8', type_registry=type_registry)
         self.type_registry = type_registry
@@ -191,16 +225,17 @@ def identity(bytestream):
     return bytestream
 
 class FixedLengthBuiltinType(TypeParser):
+    # TODO: greatly improve the logic of this initializer
     def __init__(self, name):
         super().__init__(name, True)
         self.encode_func = identity
         self.decode_func = identity
         self.is_string = False
-        if name in FixedBuiltinNumericalTypeNames:
+        if name in INFO.FixedBuiltinTypeInfo:
             self.is_number = True
             self.struct_format, self.num_bytes, 
             self.is_integer, self.is_signed, 
-            self.min_val, self.max_val = FixedBuiltinNumericalTypeNames[name]
+            self.min_val, self.max_val = INFO.FixedBuiltinTypeInfo[name]
         else:
             self.is_number = False
             self.is_integer = False
@@ -216,7 +251,7 @@ class FixedLengthBuiltinType(TypeParser):
                 self.decode_func = ascii_to_bytes
             elif 'bytes' not in name:
                 raise ValueError(f'Invalid builtin type name: {name}')
-        self.struct_format = ENDIAN_FORMAT_CHAR + self.struct_format # Make big-endian
+        self.struct_format = INFO.ENDIAN_FORMAT_CHAR + self.struct_format # Make big-endian
 
     def byte_length(self, bytestream=None):
         return self.num_bytes
@@ -258,7 +293,7 @@ class VariableLengthBuiltinType(TypeParser):
             self.encode_func = bytes_to_ascii
             self.decode_func = ascii_to_bytes
         self.length_info_bitnum = int(length_info_bitnum)
-        self.struct_format = ENDIAN_FORMAT_CHAR+LengthBitNumberToStructFormat[self.length_info_bitnum]
+        self.struct_format = INFO.ENDIAN_FORMAT_CHAR+INFO.LengthBitsFormat[self.length_info_bitnum]
         self.length_info_bytenum = self.length_info_bitnum // 8
 
     def byte_length(self, bytestream=None):
@@ -290,7 +325,7 @@ class VariableLengthBuiltinType(TypeParser):
 
 
 class TypeReference(TypeParser):
-    def __init__(self, name, type_registry=Types):
+    def __init__(self, name, type_registry=INFO.Types):
         super().__init__(name, False)
         self.type_registry = type_registry
 
@@ -318,7 +353,7 @@ class TypeReference(TypeParser):
 
 
 class CompoundType(TypeParser):
-    def __init__(self, name, fields, prepend_type_name=False, type_registry=Types, defer_inner_casts=False):
+    def __init__(self, name, fields, prepend_type_name=False, type_registry=INFO.Types, defer_inner_casts=False):
         super().__init__(name, False)
         self.type_registry = type_registry
         self.defer_inner_casts = defer_inner_casts
@@ -338,15 +373,10 @@ class CompoundType(TypeParser):
         self.parsers = [TypeReference(type_name, type_registry=self.type_registry) for type_name in self.type_names]
 
         self.inner_parsers = {}
-        self.inner_versions = {}
         for field in self.fields:
             if 'inner_type' in field:
                 self.inner_parsers[field['name']] = TypeReference(field['inner_type'],
                                                                    type_registry=self.type_registry)
-                if 'inner_version' in field:
-                    self.inner_versions[field['name']] = field['inner_version']
-                else:
-                    self.inner_versions[field['name']] = 'any'
 
     '''
     This is separated out because during __init__, not all types may be registered yet.

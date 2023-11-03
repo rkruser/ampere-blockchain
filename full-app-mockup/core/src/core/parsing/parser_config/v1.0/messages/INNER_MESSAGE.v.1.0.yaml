@@ -1,0 +1,8 @@
+config_version: 1.0
+type: INNER_MESSAGE.v.1.0
+fields:
+- name: message_headers
+  type: dynamic
+- name: message_data
+  type: "variable_bytes_32"
+  inner_type: dynamic

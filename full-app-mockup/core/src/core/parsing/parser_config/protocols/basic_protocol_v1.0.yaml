@@ -1,9 +1,0 @@
-type: BASIC_PROTOCOL #stateless, directly send the data
-version: "1.0"
-fields:
-  - name: message_timestamp #Seconds since reference time
-    type: "uint_64"
-  - name: sender_name
-    type: "variable_string_8"
-  - name: recipient_name
-    type: "variable_string_8"

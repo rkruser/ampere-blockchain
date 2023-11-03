@@ -1,6 +1,8 @@
-type: ADVANCED_PROTOCOL
-version: "1.0"
+config_version: 1.0
+type: ADVANCED_PROTOCOL_HEADERS.v.1.0
 fields:
+  - name: protocol_name
+    type: "variable_string_8"
   - name: message_timestamp #Seconds since reference time
     type: "uint_64"
   - name: message_protocol_state
