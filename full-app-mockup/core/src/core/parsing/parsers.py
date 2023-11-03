@@ -110,8 +110,10 @@ class TypeRegistry:
         return None
     
     def resolve_parsers(self):
-        for type_parser in self.types.values():
-            type_parser.resolve_parsers()
+        # Need to account for dictionary changes during iteration, so copy keys to list first
+        for type_name in list(self.types.keys()):
+            self.types[type_name].resolve_parsers()
+        
 
 
 INFO.Types = TypeRegistry()
@@ -347,7 +349,7 @@ class TypeReference(TypeParser):
         self.type_registry = type_registry
 
     def get_type_parser(self):
-        type_parser = self.type_registry.get_type(self.name, register_builtins=False)
+        type_parser = self.type_registry.get_type(self.name)
         if type_parser is None:
             raise ValueError(f'Type {self.name} not found in type registry')
         return type_parser
@@ -403,16 +405,18 @@ class CompoundType(TypeParser):
         new_parsers = [parser_reference.get_type_parser() for parser_reference in self.parsers]
         self.parsers = new_parsers
 
-        new_inner_parsers = { inner_field: inner_parser_reference.get_type_parser() for inner_field, inner_parser_reference in self.inner_parsers }
+        new_inner_parsers = { inner_field: inner_parser_reference.get_type_parser() for inner_field, inner_parser_reference in self.inner_parsers.items() }
         self.inner_parsers = new_inner_parsers
 
     def byte_length(self, bytestream=None):
         return sum([parser.byte_length(bytestream=bytestream) for parser in self.parsers])
 
     def perform_inner_casts(self, parsed_dict):
-        for field_name, inner_parser in self.inner_parsers:
+        for field_name, inner_parser in self.inner_parsers.items():
             if field_name in parsed_dict:
-                parsed_dict[field_name] = inner_parser.parse_bytes(parsed_dict[field_name])
+                success_flag, parsed_dict[field_name], _ = inner_parser.parse_bytes(parsed_dict[field_name])
+                if not success_flag:
+                    raise ValueError(f'Could not parse inner type {inner_parser.type_name()} for field {field_name}')
             else:
                 raise ValueError(f'Field {field_name} not found in dictionary')
         return parsed_dict
@@ -594,10 +598,10 @@ def test_4():
 # Now to test prepending type names
 def test_5():
     type_registry = INFO.Types
-    type_registry.register_type(FixedLengthBuiltinType('uint_32'))
-    type_registry.register_type(FixedLengthBuiltinType('string_10'))
-    type_registry.register_type(VariableLengthBuiltinType('variable_string_32'))
-    type_registry.register_type(VariableLengthBuiltinType('variable_string_8'))
+    #type_registry.register_type(FixedLengthBuiltinType('uint_32'))
+    #type_registry.register_type(FixedLengthBuiltinType('string_10'))
+    #type_registry.register_type(VariableLengthBuiltinType('variable_string_32'))
+    #type_registry.register_type(VariableLengthBuiltinType('variable_string_8'))
 
     type_registry.register_type(CompoundType('MOOP_A.v.1.0', [
         {'name': 'field1', 'type': 'uint_32'},
@@ -623,10 +627,31 @@ def test_5():
     print(moop2.parse_bytes(s))
 
 
+# Now test inner types
+def test_6():
+    type_registry = INFO.Types
+    type_registry.register_type(CompoundType('MOOP_A.v.1.0', [
+        {'name': 'Afield1', 'type': 'uint_32'},
+        {'name': 'Afield2', 'type': 'variable_string_8'},
+    ], prepend_type_name=True))
+    type_registry.register_type(CompoundType('MOOP_B.v.1.0', [
+        {'name': 'Bfield1', 'type': 'uint_32'},
+        {'name': 'Bfield2', 'type':'variable_bytes_32', 'inner_type': 'MOOP_A.v.1.0'},
+        ], prepend_type_name=True))
+
+    type_registry.resolve_parsers()
+
+    moop = type_registry.get_type('MOOP_B.v.1.0')
+    s = moop.write_bytes({'Bfield1': 1234567, 'Bfield2': {'Afield1': 1234, 'Afield2': 'hello'}})
+    print("Moop2")
+    print(s)
+    print(moop.parse_bytes(s))
+
 if __name__ == '__main__':
     # Test code
     #test_1()
     #test_2()
     #test_3()
     #test_4()
-    test_5()
+    #test_5()
+    test_6()
