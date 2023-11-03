@@ -8,20 +8,31 @@ import warnings
 
 # Consider wrapping all created objects in a class
 
-# "name": (struct format code, number of bytes, is_integer, is_signed, min_val, max_val)
+class BasicTypeInfo:
+    def __init__(self, struct_format, num_bytes, is_integer, is_signed, min_val, max_val):
+        self.struct_format = struct_format
+        self.num_bytes = num_bytes
+        self.is_integer = is_integer
+        self.is_signed = is_signed
+        self.min_val = min_val
+        self.max_val = max_val
+    def get_tuple(self):
+        return (self.struct_format, self.num_bytes, self.is_integer, self.is_signed, self.min_val, self.max_val)
+
+
 class INFO:
     ENDIAN_FORMAT_CHAR = '>' #big-endian
     FixedBuiltinTypeInfo = {
-        'uint_8': ('B', 1, True, False, 0, 2**8-1),
-        'uint_16': ('H', 2, True, False, 0, 2**16-1),
-        'uint_32': ('I', 4, True, False, 0, 2**32-1),
-        'uint_64': ('Q', 8, True, False, 0, 2**64-1),
-        'int_8': ('b', 1, True, True, -2**7, 2**7-1),
-        'int_16': ('h', 2, True, True, -2**15, 2**15-1),
-        'int_32': ('i', 4, True, True, -2**31, 2**31-1),
-        'int_64': ('q', 8, True, True, -2**63, 2**63-1),
-        'float_32': ('f', 4, False, True, None, None),
-        'float_64': ('d', 8, False, True, None, None)
+        'uint_8': BasicTypeInfo('B', 1, True, False, 0, 2**8-1),
+        'uint_16': BasicTypeInfo('H', 2, True, False, 0, 2**16-1),
+        'uint_32': BasicTypeInfo('I', 4, True, False, 0, 2**32-1),
+        'uint_64': BasicTypeInfo('Q', 8, True, False, 0, 2**64-1),
+        'int_8': BasicTypeInfo('b', 1, True, True, -2**7, 2**7-1),
+        'int_16': BasicTypeInfo('h', 2, True, True, -2**15, 2**15-1),
+        'int_32': BasicTypeInfo('i', 4, True, True, -2**31, 2**31-1),
+        'int_64': BasicTypeInfo('q', 8, True, True, -2**63, 2**63-1),
+        'float_32': BasicTypeInfo('f', 4, False, True, None, None),
+        'float_64': BasicTypeInfo('d', 8, False, True, None, None)
     }
     LengthBitsFormat = {
         8: 'B',
@@ -29,6 +40,7 @@ class INFO:
         32: 'I',
         64: 'Q'
     }
+    Types = None
 
 def isBuiltinType(type_name):
     if type_name == 'dynamic':
@@ -235,7 +247,7 @@ class FixedLengthBuiltinType(TypeParser):
             self.is_number = True
             self.struct_format, self.num_bytes, 
             self.is_integer, self.is_signed, 
-            self.min_val, self.max_val = INFO.FixedBuiltinTypeInfo[name]
+            self.min_val, self.max_val = INFO.FixedBuiltinTypeInfo[name].get_tuple()
         else:
             self.is_number = False
             self.is_integer = False
@@ -455,3 +467,8 @@ TODO:
 
 Note: entry point for parsing a new message is either the dynamic parser or the latest OUTER_MESSAGE parser or something
 '''
+
+
+if __name__ == '__main__':
+    # Test code
+    pass
