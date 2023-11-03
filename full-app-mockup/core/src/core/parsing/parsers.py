@@ -97,10 +97,10 @@ class TypeRegistry:
             return None
         return self.get_type(latest_version_name)
 
-    def get_type(self, type_name):
+    def get_type(self, type_name, register_builtins=True):
         if type_name in self.types:
             return self.types[type_name]
-        elif isBuiltinType(type_name):
+        elif register_builtins and isBuiltinType(type_name):
             if type_name == 'dynamic':
                 return self.register_type(DynamicType())
             elif isVariableLength(type_name):
@@ -127,7 +127,7 @@ def split_typename(type_name):
     if len(split_name) == 4:
         if split_name[1] != 'v':
             raise ValueError(f'Invalid type name {type_name}. Types must have either no version or a version of the form "[NAME].v.X.Y"')
-        return (split_name[0], tuple(int(split_name[2]), int(split_name[3])))
+        return (split_name[0], tuple((int(split_name[2]), int(split_name[3]))))
     elif len(split_name) == 1:
         return (type_name, None)
     else:
@@ -347,7 +347,7 @@ class TypeReference(TypeParser):
         self.type_registry = type_registry
 
     def get_type_parser(self):
-        type_parser = self.type_registry.get_type(self.name)
+        type_parser = self.type_registry.get_type(self.name, register_builtins=False)
         if type_parser is None:
             raise ValueError(f'Type {self.name} not found in type registry')
         return type_parser
@@ -551,7 +551,82 @@ def test_2():
     bytes_in = variable_string_32.parse_bytes(bytes_out)
     print(bytes_out, bytes_in)
 
+
+def test_3():
+    print("Testing type references")
+    int32 = TypeReference('int_32')
+    bytes_out = int32.write_bytes(-1234567)
+    bytes_in = int32.parse_bytes(bytes_out)
+    print(bytes_out, bytes_in)
+
+# Check type references
+def test_4():
+    print("Testing type references")
+    type_registry = INFO.Types
+    type_registry.register_type(FixedLengthBuiltinType('uint_32'))
+    type_registry.register_type(FixedLengthBuiltinType('string_10'))
+    type_registry.register_type(VariableLengthBuiltinType('variable_string_32'))
+
+    type_registry.register_type(CompoundType('MOOP_A.v.1.0', [
+        {'name': 'field1', 'type': 'uint_32'},
+        {'name': 'field2', 'type': 'string_10'},
+    ]))
+    moop = type_registry.get_type('MOOP_A.v.1.0')
+    print(moop.write_bytes({'field1': 1234567, 'field2': 'hello'}))
+    print(moop.parse_bytes(b'\x00\x12\xd6\x87hellothere'))
+
+    type_registry.register_type(CompoundType('MOOP_B.v.1.0', [
+        {'name': 'field1', 'type': 'uint_32'},
+        {'name': 'field2', 'type': 'string_10'},
+        {'name': 'field3', 'type': 'variable_string_32'},
+        {'name': 'field4', 'type': 'MOOP_A.v.1.0'},
+    ]))
+    print(type_registry.types)
+    # See if resolve parsers works
+    type_registry.resolve_parsers()
+
+    moop2 = type_registry.get_type('MOOP_B.v.1.0')
+    s = moop2.write_bytes({'field1': 1234567, 'field2': 'hello', 'field3': 'hello, here is a longer message', 'field4': {'field1': 1234567, 'field2': 'hello'}})
+    print("Moop2")
+    print(s)
+    print(moop2.parse_bytes(s))
+
+# Now to test prepending type names
+def test_5():
+    type_registry = INFO.Types
+    type_registry.register_type(FixedLengthBuiltinType('uint_32'))
+    type_registry.register_type(FixedLengthBuiltinType('string_10'))
+    type_registry.register_type(VariableLengthBuiltinType('variable_string_32'))
+    type_registry.register_type(VariableLengthBuiltinType('variable_string_8'))
+
+    type_registry.register_type(CompoundType('MOOP_A.v.1.0', [
+        {'name': 'field1', 'type': 'uint_32'},
+        {'name': 'field2', 'type': 'string_10'},
+    ]))
+    moop = type_registry.get_type('MOOP_A.v.1.0')
+    print(moop.write_bytes({'field1': 1234567, 'field2': 'hello'}))
+    print(moop.parse_bytes(b'\x00\x12\xd6\x87hellothere'))
+
+    type_registry.register_type(CompoundType('MOOP_B.v.1.0', [
+        {'name': 'field1', 'type': 'uint_32'},
+        {'name': 'field2', 'type': 'string_10'},
+        {'name': 'field3', 'type': 'variable_string_32'},
+        {'name': 'field4', 'type': 'MOOP_A.v.1.0'},
+    ], prepend_type_name=True))
+
+    type_registry.resolve_parsers()
+
+    moop2 = type_registry.get_type('MOOP_B.v.1.0')
+    s = moop2.write_bytes({'field1': 1234567, 'field2': 'hello', 'field3': 'hello, here is a longer message', 'field4': {'field1': 1234567, 'field2': 'hello'}})
+    print("Moop2")
+    print(s)
+    print(moop2.parse_bytes(s))
+
+
 if __name__ == '__main__':
     # Test code
     #test_1()
-    test_2()
+    #test_2()
+    #test_3()
+    #test_4()
+    test_5()
