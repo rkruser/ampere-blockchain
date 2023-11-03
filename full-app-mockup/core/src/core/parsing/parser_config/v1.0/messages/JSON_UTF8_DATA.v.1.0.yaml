@@ -1,0 +1,6 @@
+config_version: 1.0
+name: JSON_UTF8_DATA.v.1.0
+prepend_type_name: true
+fields:
+- name: data
+  type: json_utf8

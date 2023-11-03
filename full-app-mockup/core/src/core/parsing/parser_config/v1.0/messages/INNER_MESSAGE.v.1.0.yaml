@@ -1,5 +1,5 @@
 config_version: 1.0
-type: INNER_MESSAGE.v.1.0
+name: INNER_MESSAGE.v.1.0
 fields:
 - name: message_headers
   type: dynamic

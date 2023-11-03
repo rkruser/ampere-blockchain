@@ -1,5 +1,5 @@
 config_version: 1.0
-type: ADVANCED_PROTOCOL_HEADERS.v.1.0
+name: ADVANCED_PROTOCOL_HEADERS.v.1.0
 fields:
   - name: protocol_name
     type: "variable_string_8"

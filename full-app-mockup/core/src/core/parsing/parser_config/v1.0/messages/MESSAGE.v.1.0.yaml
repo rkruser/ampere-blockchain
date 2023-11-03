@@ -1,5 +1,5 @@
 config_version: 1.0
-type: MESSAGE.v.1.0
+name: MESSAGE.v.1.0
 prepend_type_name: true
 fields:
 - name: message

@@ -79,12 +79,9 @@ float_[bits] (e.g., float_32)
 
 import os
 import yaml
+from core.parsing.parsers import make_and_register_parser_from_config, INFO
 
 CONFIG_DIRECTORY = './parser_config'
-
-# TODO: store all config types here
-class TypeRegistry:
-    pass
 
 def read_configs(config_directory):
     # should walk through the config directory and read in all yaml files
@@ -103,11 +100,17 @@ def read_configs(config_directory):
                         print(e)
     return all_configs
 
-def make_parser(config_file_contents):
-    # should parse the contents as yaml, then create object/function that can parse the type
-    # Store type, version, struct format strings, etc. in object
-    pass
+def make_all_parsers(configs):
+    for cfg in configs.values():
+        make_and_register_parser_from_config(cfg)
+    INFO.Types.resolve_parsers()
+
 
 if __name__ == '__main__':
     all_configs = read_configs(CONFIG_DIRECTORY)
     print(all_configs)
+    make_all_parsers(all_configs)
+
+    print("\n\n==============================================\n")
+    print(INFO.Types.rootname_versions)
+    print(INFO.Types.types.keys())

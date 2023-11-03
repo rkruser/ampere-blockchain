@@ -1,6 +1,7 @@
 from functools import wraps
 import struct
 import warnings
+import json
 
 # convention: types always end with ".X.Y" where X and Y and version and sub-version.
 # Version specs by themselves are "X.Y" strings
@@ -47,6 +48,9 @@ def isBuiltinType(type_name):
         return True
     elif type_name in INFO.FixedBuiltinTypeInfo:
         return True
+    if '.' in type_name:
+        return False
+
     split_name = type_name.split('_')
     if len(split_name) == 3:
         prefix, rootname, length_info_bitnum = split_name
@@ -58,14 +62,19 @@ def isBuiltinType(type_name):
             return False
         return True
     if len(split_name) == 2:
-        rootname, bytenum = split_name
-        try:
-            bytenum = int(bytenum)
-        except ValueError:
-            return False
-        if (rootname not in ['string', 'bytes']):
-            return False
-        return True
+        rootname, suffix = split_name
+        if rootname == 'json':
+            if suffix not in ['ascii', 'utf8']:
+                return False
+            return True
+        else:
+            try:
+                suffix = int(suffix)
+            except ValueError:
+                return False
+            if (rootname not in ['string', 'bytes']):
+                return False
+            return True
     return False
 
 def isVariableLength(type_name):
@@ -103,6 +112,8 @@ class TypeRegistry:
         elif register_builtins and isBuiltinType(type_name):
             if type_name == 'dynamic':
                 return self.register_type(DynamicType())
+            elif type_name.startswith('json'):
+                return self.register_type(JSONType(type_name, type_name.split('_')[1]))
             elif isVariableLength(type_name):
                 return self.register_type(VariableLengthBuiltinType(type_name))
             else:
@@ -155,6 +166,9 @@ class TypeParser:
 
     def type_version(self):
         return self.version
+    
+    def get_type_parser(self):
+        return self
 
     def resolve_parsers(self):
         pass
@@ -180,6 +194,30 @@ class TypeParser:
     def validate_type(data_dictionary):
         raise NotImplementedError
 
+
+class JSONType(TypeParser):
+    def __init__(self, name, encoding):
+        super().__init__(name, True)
+        self.encoding = encoding
+
+    def byte_length(self, bytestream=None):
+        if bytestream is None:
+            warnings.warn('byte_length method of JSON type called without bytestream; returning 0')
+            return 0
+        return len(bytestream)
+    
+    def parse_bytes(self, bytestream):
+        try:
+            parsed_value = json.loads(bytestream.decode(self.encoding))
+        except json.JSONDecodeError:
+            return (False, None, bytestream)
+        return (True, parsed_value, b'')
+
+    def write_bytes(self, value):
+        return json.dumps(value).encode(self.encoding)
+    
+    def validate_type(self, value):
+        raise NotImplementedError
 
 class DynamicType(TypeParser):
     # Can only be used to parse compound types that prepend their type name to the bytestream
@@ -468,6 +506,15 @@ class CompoundType(TypeParser):
                 return False
         return True
 
+
+
+def make_and_register_parser_from_config(config_dict, type_registry=INFO.Types):
+    new_type_name = config_dict['name']
+    fields = config_dict['fields']
+    prepend_type_name = config_dict.get('prepend_type_name', False)
+    parser = CompoundType(new_type_name, fields, prepend_type_name=prepend_type_name)
+    type_registry.register_type(parser)
+    return parser
 
 '''
 TODO:

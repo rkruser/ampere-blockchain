@@ -1,5 +1,5 @@
 config_version: 1.0
-type: BASIC_PROTOCOL_HEADERS.v.1.0
+name: BASIC_PROTOCOL_HEADERS.v.1.0
 fields:
   - name: protocol_name
     type: "variable_string_8"
